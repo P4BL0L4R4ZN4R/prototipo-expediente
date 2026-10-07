@@ -2,7 +2,7 @@ import { useState } from "react";
 import { SplitButton, Dropdown } from "react-bootstrap";
 import ConfigIA from "./ConfigIA";
 import SeccionEditable from "./SeccionEditable";
-import type { Expediente } from "./useExpediente";
+import type { Expediente } from "../../expediente";
 
 interface Props {
   expediente: Expediente;

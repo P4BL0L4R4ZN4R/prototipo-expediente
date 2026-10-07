@@ -1,7 +1,8 @@
 import { useState } from "react";
 import ConfigIA from "./ConfigIA";
 import SeccionEditable from "./SeccionEditable";
-import type { Expediente } from "./useExpediente";
+import type { Expediente } from "@/types/expediente";
+import { useExpediente, useExpedienteHandles } from "@/hooks";
 
 interface Props {
   expediente: Expediente;
@@ -110,7 +111,7 @@ export default function EntregableTab({
               Generando: {progreso ?? "..."}
             </>
           ) : (
-            "Regenerar Entregable"
+            "Procesar Entregable"
           )}
         </button>
 

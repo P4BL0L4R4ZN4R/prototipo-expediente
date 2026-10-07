@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\{
     CalendarioController,
     PropuestaController,
     EntregableController,
+    ZipController,
 
     // pruebas
     TestPropuestaController,
@@ -86,4 +87,7 @@ Route::prefix('prototipo/excel')->group(function () {
     // CALENDARIO (JSON, no Word)
     // =========================================================
     Route::get('/calendario/{id}', [CalendarioController::class, 'show']);
+
+
+    Route::get('/{id}/zip', [ZipController::class, 'descargar']);
 });

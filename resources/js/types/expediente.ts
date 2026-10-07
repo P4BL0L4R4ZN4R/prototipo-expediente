@@ -71,8 +71,20 @@ export type DataDura = {
   };
 };
 
-export type Expediente = {
+
+
+// export type Expediente = {
+//   id: string;
+//   ia: IaData;
+//   data: DataDura;
+// };
+
+// resources/js/types/expediente.ts
+export interface Expediente {
   id: string;
-  ia: IaData;
-  data: DataDura;
-};
+  ia: Record<string, any>;
+  data: Record<string, any>;
+  meta: Record<string, any> | null;
+  propuesta_ia: Record<string, any> | null;
+  entregable: Record<string, any> | null;
+}

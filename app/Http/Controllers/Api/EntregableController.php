@@ -47,6 +47,11 @@ class EntregableController extends Controller
     private function generarSeccion(string $id, string $seccion)
     {
 
+        $exp = Expediente::find($id);
+        if (!$exp) {
+            return response()->json(['error' => 'Expediente no encontrado'], 404);
+        }
+
         $ia   = $exp->ia   ?? [];
         $data = $exp->data ?? [];
         $meta = $exp->meta ?? [];
@@ -60,6 +65,7 @@ class EntregableController extends Controller
                 'error' => 'Faltan "tema" y "area". Guárdalos antes de generar.',
             ], 422);
         }
+
 
         $calc = new CalculosExpediente($data);
         $ctx  = $this->construirContexto($id, $calc);

@@ -4,6 +4,7 @@ import GeneralTab from "./GeneralTab";
 import PropuestaTab from "./PropuestaTab";
 import EntregableTab from "./EntregableTab";
 import { useExpediente, useExpedienteHandles } from "@/hooks";
+import { descargarZip } from "@/api/excelApi";
 import "@/../css/expediente.css";
 
 interface Props {
@@ -32,6 +33,9 @@ export default function ExpedienteWindow({
   const [tema, setTema] = useState("");
   const [area, setArea] = useState("");
 
+  // 👇 Estado de exportación (solo true/false, ya no hay progreso)
+  const [exportando, setExportando] = useState(false);
+
   useEffect(() => {
     if (expediente?.meta) {
       setEstado(expediente.meta.estado ?? "");
@@ -58,6 +62,21 @@ export default function ExpedienteWindow({
     guardarMeta,
     refrescar,
   });
+
+  // 👇 Handler del ZIP
+  const handleExportarTodo = () => {
+    if (!idExpediente) return;
+
+    setExportando(true);
+
+    // Dispara la descarga del ZIP
+    descargarZip(idExpediente);
+
+    // El navegador empieza a descargar en background;
+    // no hay callback real, así que liberamos el botón
+    // después de un momento.
+    setTimeout(() => setExportando(false), 1500);
+  };
 
   return (
     <FloatingWindow
@@ -100,6 +119,7 @@ export default function ExpedienteWindow({
 
       {!loading && !error && expediente && (
         <>
+          {/* Tabs */}
           <div className="tabs-container">
             <button
               type="button"
@@ -126,6 +146,55 @@ export default function ExpedienteWindow({
             </button>
           </div>
 
+          {/* Barra de acciones (fuera de los tabs) */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 12,
+            }}
+          >
+            <button
+              type="button"
+              className="btn btn-sm btn-success"
+              onClick={handleGenerarPropuesta}
+              disabled={
+                !tema ||
+                !area ||
+                generatingPropuesta ||
+                generatingEntregable
+              }
+            >
+              {generatingPropuesta ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" />
+                  {progresoPropuesta ?? "Generando..."}
+                </>
+              ) : (
+                "Generar Propuesta"
+              )}
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-primary"
+              onClick={handleExportarTodo}
+              disabled={!idExpediente || exportando}
+              title="Descarga los 7 documentos Word en un ZIP"
+            >
+              {exportando ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" />
+                  Generando ZIP...
+                </>
+              ) : (
+                "Exportar todo (ZIP)"
+              )}
+            </button>
+          </div>
+
+          {/* Contenido */}
           {activeTab === "general" && (
             <GeneralTab expediente={expediente} />
           )}

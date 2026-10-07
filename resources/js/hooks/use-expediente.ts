@@ -1,19 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-
-const SECCIONES_PROPUESTA = [
-  { key: "texto-propuesta", label: "Texto propuesta" },
-  { key: "introduccion", label: "Introducción" },
-  { key: "problematica", label: "Problemática" },
-  { key: "objetivo-general", label: "Objetivo general" },
-  { key: "objetivos-especificos", label: "Objetivos específicos" },
-  { key: "metodologia", label: "Metodología" },
-];
-
-const SECCIONES_ENTREGABLE = [
-  { key: "introduccion", label: "Introducción" },
-  { key: "problematica", label: "Problemática" },
-  { key: "desarrollo-conceptos", label: "Desarrollo conceptos" },
-];
+import {
+  obtenerExpediente,
+  actualizarExpediente,
+  generarPropuestaSeccion,
+  generarEntregableSeccion,
+  SECCIONES_PROPUESTA,
+  SECCIONES_ENTREGABLE,
+} from "@/api/excelApi";
+import type { Expediente } from "@/types/expediente";
 
 interface Options {
   idExpediente: string | null;
@@ -24,11 +18,12 @@ interface Options {
   refrescar: () => Promise<void>;
 }
 
-export function useExpediente(
-  idExpediente: string | null,
-  open: boolean
-) {
-  const [expediente, setExpediente] = useState<any>(null);
+// =========================================================
+// CARGA DE DATOS
+// =========================================================
+
+export function useExpediente(idExpediente: string | null, open: boolean) {
+  const [expediente, setExpediente] = useState<Expediente | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,30 +37,10 @@ export function useExpediente(
     setError(null);
 
     try {
-      const res = await fetch(
-        `/api/prototipo/excel/${idExpediente}`,
-        {
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-
-        throw new Error(
-          err.error || `Error ${res.status} al cargar expediente`
-        );
-      }
-
-      const data = await res.json();
-
+      const data = await obtenerExpediente(idExpediente);
       setExpediente(data);
     } catch (err: any) {
-      setError(
-        err?.message || "Error al cargar el expediente"
-      );
+      setError(err?.message || "Error al cargar el expediente");
     } finally {
       setLoading(false);
     }
@@ -75,26 +50,7 @@ export function useExpediente(
     async (meta: Record<string, any>) => {
       if (!idExpediente) return;
 
-      const res = await fetch(
-        `/api/prototipo/excel/${idExpediente}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({ meta }),
-        }
-      );
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-
-        throw new Error(
-          err.error || "Error al guardar los datos del expediente"
-        );
-      }
-
+      await actualizarExpediente(idExpediente, { meta });
       await refrescar();
     },
     [idExpediente, refrescar]
@@ -117,6 +73,10 @@ export function useExpediente(
     guardarMeta,
   };
 }
+
+// =========================================================
+// ACCIONES (generar, guardar)
+// =========================================================
 
 export function useExpedienteHandles({
   idExpediente,
@@ -158,29 +118,12 @@ export function useExpedienteHandles({
           `${s.label} (${i + 1}/${SECCIONES_PROPUESTA.length})`
         );
 
-        const res = await fetch(
-          `/api/prototipo/excel/propuesta/${idExpediente}/${s.key}`,
-          {
-            headers: {
-              Accept: "application/json",
-            },
-          }
-        );
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-
-          throw new Error(
-            `Falló "${s.label}": ${err.error || res.status}`
-          );
-        }
+        await generarPropuestaSeccion(idExpediente, s.key);
       }
 
       await refrescar();
     } catch (err: any) {
-      setGenError(
-        err?.message || "Error al generar propuesta"
-      );
+      setGenError(err?.message || "Error al generar propuesta");
     } finally {
       setGeneratingPropuesta(false);
       setProgresoPropuesta(null);
@@ -209,29 +152,12 @@ export function useExpedienteHandles({
           `${s.label} (${i + 1}/${SECCIONES_ENTREGABLE.length})`
         );
 
-        const res = await fetch(
-          `/api/prototipo/excel/entregable/${idExpediente}/${s.key}`,
-          {
-            headers: {
-              Accept: "application/json",
-            },
-          }
-        );
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-
-          throw new Error(
-            `Falló "${s.label}": ${err.error || res.status}`
-          );
-        }
+        await generarEntregableSeccion(idExpediente, s.key);
       }
 
       await refrescar();
     } catch (err: any) {
-      setGenError(
-        err?.message || "Error al generar entregable"
-      );
+      setGenError(err?.message || "Error al generar entregable");
     } finally {
       setGeneratingEntregable(false);
       setProgresoEntregable(null);
@@ -244,31 +170,11 @@ export function useExpedienteHandles({
     if (!idExpediente) return;
 
     const propuesta_ia: Record<string, any> = {};
-
     for (const [key, texto] of Object.entries(secciones)) {
       propuesta_ia[key] = { texto };
     }
 
-    const res = await fetch(
-      `/api/prototipo/excel/${idExpediente}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ propuesta_ia }),
-      }
-    );
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-
-      throw new Error(
-        err.error || "Error al guardar"
-      );
-    }
-
+    await actualizarExpediente(idExpediente, { propuesta_ia });
     await refrescar();
   };
 
@@ -278,31 +184,11 @@ export function useExpedienteHandles({
     if (!idExpediente) return;
 
     const entregable: Record<string, any> = {};
-
     for (const [key, texto] of Object.entries(secciones)) {
       entregable[key] = { texto };
     }
 
-    const res = await fetch(
-      `/api/prototipo/excel/${idExpediente}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ entregable }),
-      }
-    );
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-
-      throw new Error(
-        err.error || "Error al guardar"
-      );
-    }
-
+    await actualizarExpediente(idExpediente, { entregable });
     await refrescar();
   };
 

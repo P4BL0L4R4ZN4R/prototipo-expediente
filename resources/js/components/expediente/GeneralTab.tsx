@@ -1,4 +1,4 @@
-import type { Expediente } from "./useExpediente";
+import type { Expediente } from "../../expediente";
 
 interface Props {
   expediente: Expediente;

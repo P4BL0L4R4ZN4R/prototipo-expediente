@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { router } from "@inertiajs/react";
 import AdminLayout from "@/layouts/main";
 import { subirExcel, listarExpedientes } from "@/api/excelApi";
 import ExpedienteWindow from "@/components/expediente/ExpedienteWindow";
@@ -34,7 +33,17 @@ export default function Index() {
 
     try {
       const { id } = await subirExcel(file);
-      router.visit(`/prototipo/${id}`);
+
+      // refresca la lista para que aparezca el nuevo expediente
+      const lista = await listarExpedientes();
+      setExpedientes(lista);
+
+      // limpia el input
+      setFile(null);
+
+      // abre la ventana con el expediente recién creado
+      setSelectedId(id);
+      setWindowOpen(true);
     } catch (err: any) {
       setError(err.message);
     } finally {
