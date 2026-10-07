@@ -1,0 +1,88 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Test;
+
+
+
+class TestController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+
+    
+    public function index()
+    {
+        // Solo renderiza la página. Los datos NO van aquí.
+        return Inertia::render('test/testing');
+    }
+
+    public function data(Request $request)
+    {
+        $productos = Test::query()
+            ->when($request->search, fn($q, $s) => $q->where('nombre', 'ilike', "%{$s}%"))
+            ->orderBy('id', 'desc')
+            ->paginate(25);
+
+        // Si la petición viene de Inertia, devuelve Inertia.
+        if ($request->header('X-Inertia')) {
+            return Inertia::render('test/Index', [
+                'productos' => $productos,
+            ]);
+        }
+
+        // Si no, es un cliente externo (móvil, Postman): devuelve JSON puro.
+        return response()->json($productos);
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        //
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        //
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(string $id)
+    {
+        //
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(string $id)
+    {
+        //
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, string $id)
+    {
+        //
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
+    {
+        //
+    }
+}
