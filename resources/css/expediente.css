@@ -1,0 +1,57 @@
+/* =========================================================
+   EXPEDIENTE — Estilos del contenedor principal
+   ========================================================= */
+
+/* Contenedor de las tabs */
+.tabs-container {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 20px;
+}
+
+/* Tab individual (base) */
+.tab {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.tab:hover {
+  color: #374151;
+}
+
+/* Tab activa */
+.tab.active {
+  font-weight: 600;
+  color: #111827;
+  border-bottom-color: #2563eb;
+}
+
+/* Select de estado en el header del FloatingWindow */
+.estado-select {
+  width: 160px;
+  font-size: 13px;
+}
+
+/* Contenedor de loading centrado */
+.loading-container {
+  padding: 48px 0;
+  text-align: center;
+}
+
+/* =========================================================
+   MENSAJES REUTILIZABLES (por si los quieres tener aquí
+   mientras montas el common.css)
+   ========================================================= */
+
+.msg-sm {
+  font-size: 13px;
+}
