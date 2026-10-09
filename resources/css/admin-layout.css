@@ -1,0 +1,31 @@
+/* =========================================================
+   AdminLayout — sidebar y estructura general
+   ========================================================= */
+
+.admin-layout {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ── Sidebar ────────────────────────────────────────────── */
+.admin-sidebar {
+  width: 220px;
+  padding: 20px 0;
+  border-right: 1px solid #e5e5e5;
+  flex-shrink: 0;
+}
+
+/* ── Links del sidebar ──────────────────────────────────── */
+.admin-nav-link {
+  font-size: 14px;
+  color: #111;
+  transition: background 0.15s ease;
+}
+
+.admin-nav-link:hover {
+  background: #f3f4f6;
+}
+
+/* ── Main ───────────────────────────────────────────────── */
+.admin-main {
+  overflow-y: auto;
+}

@@ -254,3 +254,15 @@ export function descargarDocumento(url: string) {
   a.click();
   document.body.removeChild(a);
 }
+
+
+export async function actualizarMeta(
+  id: string,
+  meta: Record<string, any>
+): Promise<{ ok: boolean }> {
+  return fetchJson(`${BASE}/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ meta }),
+    headers: { "Content-Type": "application/json" },
+  });
+}

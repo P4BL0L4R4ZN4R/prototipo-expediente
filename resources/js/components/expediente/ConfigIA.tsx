@@ -16,7 +16,7 @@ export default function ConfigIA({
       <div className="card-body py-2 px-3">
         <div className="row g-2">
           <div className="col-md-6">
-            <label className="form-label mb-1" style={{ fontSize: 13 }}>
+            <label className="form-label small mb-1">
               Tema
             </label>
             <input
@@ -29,7 +29,7 @@ export default function ConfigIA({
           </div>
 
           <div className="col-md-6">
-            <label className="form-label mb-1" style={{ fontSize: 13 }}>
+            <label className="form-label small mb-1">
               Área
             </label>
             <input

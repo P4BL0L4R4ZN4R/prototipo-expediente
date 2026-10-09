@@ -1,6 +1,9 @@
 import { Rnd } from "react-rnd";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+// import "./FloatingWindow.css";
+import "@/../css/expediente-floating-window.css";
+
 
 interface Props {
   title: string;
@@ -12,6 +15,7 @@ interface Props {
   height?: number;
   initialX?: number;
   initialY?: number;
+  restoreKey?: number;
 }
 
 export default function FloatingWindow({
@@ -24,91 +28,100 @@ export default function FloatingWindow({
   height = 650,
   initialX = 80,
   initialY = 80,
+  restoreKey,
 }: Props) {
   const [size, setSize] = useState({ width, height });
   const [pos, setPos] = useState({ x: initialX, y: initialY });
   const [maximizado, setMaximizado] = useState(true);
-  const [sizeAntes, setSizeAntes] = useState({ width, height });
-  const [posAntes, setPosAntes] = useState({ x: initialX, y: initialY });
+  const [minimizado, setMinimizado] = useState(false);
   const [mainEl, setMainEl] = useState<HTMLElement | null>(null);
+  const [barEl, setBarEl] = useState<HTMLElement | null>(null);
 
-  // Encontrar el <main> cuando monta
   useEffect(() => {
     setMainEl(document.querySelector("main"));
+    setBarEl(document.getElementById("minimized-windows-bar"));
   }, []);
 
-  // Resetear al abrir
   useEffect(() => {
     if (open) {
       setMaximizado(true);
+      setMinimizado(false);
     }
   }, [open]);
+
+  // 👇 Restaurar cuando el padre lo pida
+  useEffect(() => {
+    if (restoreKey !== undefined && restoreKey > 0) {
+      setMinimizado(false);
+    }
+  }, [restoreKey]);
 
   if (!open) return null;
 
   const renderHeader = () => (
     <div
-      className="rnd-drag-handle"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "12px 20px",
-        background: "#f9fafb",
-        borderBottom: "1px solid #e5e7eb",
-        cursor: maximizado ? "default" : "move",
-        userSelect: "none",
-        gap: 12,
-        flexShrink: 0,
+      className={`rnd-drag-handle fw-window-header ${
+        maximizado || minimizado
+          ? "fw-window-header-static"
+          : "fw-window-header-draggable"
+      } ${minimizado ? "fw-window-header-minimized" : ""}`}
+      onDoubleClick={() => {
+        if (!minimizado) setMaximizado((v) => !v);
       }}
-      onDoubleClick={() => setMaximizado((v) => !v)}
+      onClick={() => {
+        if (minimizado) setMinimizado(false);
+      }}
     >
-      <span style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>
-        {title}
-      </span>
+      <span className="fw-semibold text-truncate">{title}</span>
 
-      {headerRight && (
+      {headerRight && !minimizado && (
         <div
-          style={{ display: "flex", alignItems: "center", gap: 8 }}
+          className="d-flex align-items-center gap-2"
           onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           {headerRight}
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+      <div className="d-flex gap-1 align-items-center">
         <button
           type="button"
-          onClick={() => setMaximizado((v) => !v)}
-          onMouseDown={(e) => e.stopPropagation()}
-          title={maximizado ? "Restaurar" : "Maximizar"}
-          style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 16,
-            lineHeight: 1,
-            color: "#6b7280",
-            padding: 4,
+          onClick={(e) => {
+            e.stopPropagation();
+            setMinimizado((v) => !v);
           }}
+          onMouseDown={(e) => e.stopPropagation()}
+          title={minimizado ? "Restaurar" : "Minimizar"}
+          className="fw-window-icon-btn"
         >
-          {maximizado ? "❐" : "▢"}
+          {minimizado ? "▢" : "—"}
         </button>
+
+        {!minimizado && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMaximizado((v) => !v);
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            title={maximizado ? "Restaurar" : "Maximizar"}
+            className="fw-window-icon-btn"
+          >
+            {maximizado ? "❐" : "▢"}
+          </button>
+        )}
 
         <button
           type="button"
-          onClick={onClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
           onMouseDown={(e) => e.stopPropagation()}
           title="Cerrar"
-          style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 20,
-            lineHeight: 1,
-            color: "#6b7280",
-            padding: 4,
-          }}
+          className="fw-window-icon-btn fw-window-close-btn"
         >
           ×
         </button>
@@ -116,36 +129,32 @@ export default function FloatingWindow({
     </div>
   );
 
-  const renderBody = () => (
-    <div
-      style={{
-        flex: 1,
-        minHeight: 0,
-        overflowY: "auto",
-        padding: 20,
-      }}
-    >
-      {children}
-    </div>
-  );
+  const renderBody = () => <div className="fw-window-body">{children}</div>;
 
-  // =========================================================
-  // MODO MAXIMIZADO: absoluto dentro del <main>
-  // =========================================================
+  // ── Modo minimizado ─────────────────────────────────────
+  if (minimizado) {
+    if (barEl) {
+      return createPortal(
+        <div className="fw-window-minimized">
+          {renderHeader()}
+        </div>,
+        barEl
+      );
+    }
+    return (
+      <div className="fw-window-minimized-wrap">
+        <div className="fw-window-minimized">
+          {renderHeader()}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Modo maximizado ─────────────────────────────────────
   if (maximizado) {
-    // Si no hay <main>, hacemos fallback a fixed (cubre todo)
     if (!mainEl) {
       return (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
-            background: "#fff",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
+        <div className="fw-window-maximized fw-window-maximized-fixed">
           {renderHeader()}
           {renderBody()}
         </div>
@@ -153,17 +162,7 @@ export default function FloatingWindow({
     }
 
     return createPortal(
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 10,
-          background: "#fff",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-      >
+      <div className="fw-window-maximized fw-window-maximized-absolute">
         {renderHeader()}
         {renderBody()}
       </div>,
@@ -171,9 +170,7 @@ export default function FloatingWindow({
     );
   }
 
-  // =========================================================
-  // MODO FLOTANTE: Rnd normal
-  // =========================================================
+  // ── Modo flotante ───────────────────────────────────────
   return (
     <Rnd
       size={size}
@@ -189,19 +186,7 @@ export default function FloatingWindow({
       dragHandleClassName="rnd-drag-handle"
       style={{ zIndex: 9999 }}
     >
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          background: "#fff",
-          border: "1px solid #d1d5db",
-          borderRadius: 8,
-          boxShadow: "0 10px 40px rgba(0, 0, 0, 0.20)",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-      >
+      <div className="fw-window-floating">
         {renderHeader()}
         {renderBody()}
       </div>

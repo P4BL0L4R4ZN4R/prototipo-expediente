@@ -2,116 +2,72 @@ import { useState } from "react";
 import { SplitButton, Dropdown } from "react-bootstrap";
 import ConfigIA from "./ConfigIA";
 import SeccionEditable from "./SeccionEditable";
-import type { Expediente } from "../../expediente";
+import { useExpedienteContext } from "./ExpedienteContext";
+import { error as toastError } from "@/utils/alert";
+import "@/../css/Secciones.css";
 
 interface Props {
-  expediente: Expediente;
-  tema: string;
-  area: string;
-  generating: boolean;
-  progreso: string | null;
-  genError: string | null;
-  onTemaChange: (v: string) => void;
-  onAreaChange: (v: string) => void;
-  onGenerar: () => void;
   onGenerarEntregable: () => void;
-  onGuardarSecciones: (
-    secciones: Record<string, string>
-  ) => Promise<void>;
 }
 
-// 👇 Nuevo tipo para la acción seleccionada
 type Accion = "guardar" | "guardarYGenerar";
 
-export default function PropuestaTab({
-  expediente,
-  tema,
-  area,
-  generating,
-  progreso,
-  genError,
-  onTemaChange,
-  onAreaChange,
-  onGenerar,
-  onGenerarEntregable,
-  onGuardarSecciones,
-}: Props) {
+export default function PropuestaTab({ onGenerarEntregable }: Props) {
+  const {
+    expediente,
+    tema,
+    setTema,
+    area,
+    setArea,
+    generatingPropuesta: generating,
+    progresoPropuesta: progreso,
+    genError,
+    generarPropuesta,
+    guardarPropuesta,
+  } = useExpedienteContext();
+
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
   const [guardadoOk, setGuardadoOk] = useState(false);
-  const [guardadoError, setGuardadoError] = useState<string | null>(null);
-
-  // 👇 Acción seleccionada (por defecto: guardar)
   const [accion, setAccion] = useState<Accion>("guardar");
+  const [seccionActiva, setSeccionActiva] = useState<string | null>(null);
 
-  const tienePropuesta =
-    expediente.propuesta_ia &&
-    Object.keys(expediente.propuesta_ia).length > 0;
+  const secciones = expediente.propuesta_ia
+    ? Object.entries(expediente.propuesta_ia)
+    : [];
 
+  const tienePropuesta = secciones.length > 0;
   const tieneEdits = Object.keys(edits).length > 0;
 
-  // 👇 Texto que se muestra en el botón según la acción
-  const labelAccion =
-    accion === "guardar"
-      ? "Guardar cambios"
-      : "Guardar y generar entregable";
+  const activa =
+    seccionActiva && secciones.some(([k]) => k === seccionActiva)
+      ? seccionActiva
+      : secciones[0]?.[0] ?? null;
 
-  const handleCambio = (seccion: string, texto: string) => {
-    setEdits((prev) => ({
-      ...prev,
-      [seccion]: texto,
-    }));
-  };
+  const handleCambio = (s: string, t: string) =>
+    setEdits((prev) => ({ ...prev, [s]: t }));
 
-  // Guarda solamente los cambios
   const handleGuardar = async () => {
-    if (Object.keys(edits).length === 0) return;
-
+    if (!tieneEdits) return;
     setGuardando(true);
-    setGuardadoError(null);
-    setGuardadoOk(false);
-
     try {
-      await onGuardarSecciones(edits);
-
+      await guardarPropuesta(edits);
       setEdits({});
       setGuardadoOk(true);
-
-      setTimeout(() => {
-        setGuardadoOk(false);
-      }, 2000);
+      setTimeout(() => setGuardadoOk(false), 2000);
     } catch (err: any) {
-      setGuardadoError(
-        err.message || "Error al guardar los cambios."
-      );
-
-      throw err;
+      toastError({ mensaje: err.message || "Error al guardar" });
     } finally {
       setGuardando(false);
     }
   };
 
-  // Guarda los cambios y después genera el entregable
-  const handleGuardarYGenerarEntregable = async () => {
-    try {
-      // Si hay cambios, primero los guardamos
-      if (tieneEdits) {
-        await handleGuardar();
-      }
-
-      // Si guardar fue correcto, generamos el entregable
-      onGenerarEntregable();
-    } catch {
-      // Si guardar falla, no generamos el entregable.
-    }
-  };
-
-  // 👇 Ejecuta la acción que esté seleccionada actualmente
-  const handleEjecutarAccion = () => {
+  const handleEjecutar = async () => {
     if (accion === "guardar") {
-      handleGuardar();
+      await handleGuardar();
     } else {
-      handleGuardarYGenerarEntregable();
+      await handleGuardar();
+      onGenerarEntregable();
     }
   };
 
@@ -120,29 +76,20 @@ export default function PropuestaTab({
       <ConfigIA
         tema={tema}
         area={area}
-        onTemaChange={onTemaChange}
-        onAreaChange={onAreaChange}
+        onTemaChange={setTema}
+        onAreaChange={setArea}
       />
 
       <div className="d-flex align-items-center gap-2 mb-3 flex-wrap">
-
-        {/* =====================================================
-            BOTÓN PRINCIPAL: GENERAR PROPUESTA
-        ====================================================== */}
         <button
           type="button"
           className="btn btn-primary btn-sm"
-          onClick={onGenerar}
+          onClick={generarPropuesta}
           disabled={!tema || !area || generating}
         >
           {generating ? (
             <>
-              <span
-                className="spinner-border spinner-border-sm me-2"
-                role="status"
-                aria-hidden="true"
-              ></span>
-
+              <span className="spinner-border spinner-border-sm me-2" />
               Generando: {progreso ?? "..."}
             </>
           ) : (
@@ -150,84 +97,80 @@ export default function PropuestaTab({
           )}
         </button>
 
-        {/* =====================================================
-            SPLIT BUTTON: el dropdown SOLO selecciona,
-            el botón principal EJECUTA
-        ====================================================== */}
         <SplitButton
           variant="outline-success"
-          title={guardando ? "Guardando..." : labelAccion}
-          // 👇 El botón principal ejecuta la acción seleccionada
-          onClick={handleEjecutarAccion}
+          title={guardando ? "Guardando..." : "Guardar cambios"}
+          onClick={handleEjecutar}
           disabled={guardando || generating}
           size="sm"
         >
-          {/* OPCIÓN 1: GUARDAR CAMBIOS */}
           <Dropdown.Item
-            active={accion === "guardar"}          // 👈 marca cuál está activa
-            onClick={() => setAccion("guardar")}   // 👈 solo cambia el estado
+            active={accion === "guardar"}
+            onClick={() => setAccion("guardar")}
             disabled={!tieneEdits || guardando}
           >
             Guardar cambios
           </Dropdown.Item>
-
-          {/* OPCIÓN 2: GUARDAR Y GENERAR ENTREGABLE */}
           <Dropdown.Item
-            active={accion === "guardarYGenerar"}       // 👈 marca cuál está activa
-            onClick={() => setAccion("guardarYGenerar")} // 👈 solo cambia el estado
+            active={accion === "guardarYGenerar"}
+            onClick={() => setAccion("guardarYGenerar")}
             disabled={guardando || generating || !tema || !area}
           >
             Guardar y generar entregable
           </Dropdown.Item>
         </SplitButton>
 
-        {/* MENSAJE DE GUARDADO CORRECTO */}
-        {guardadoOk && (
-          <span className="text-success" style={{ fontSize: 13 }}>
-            ✓ Guardado
-          </span>
-        )}
-
-        {/* MENSAJE DE ERROR */}
-        {guardadoError && (
-          <span className="text-danger" style={{ fontSize: 13 }}>
-            {guardadoError}
-          </span>
-        )}
-
-        {/* AVISO DE TEMA / ÁREA */}
-        {(!tema || !area) && (
-          <span className="text-muted" style={{ fontSize: 13 }}>
-            Completa Tema y Área primero
-          </span>
-        )}
+        {guardadoOk && <span className="text-success small">✓ Guardado</span>}
       </div>
 
-      {/* ERROR DE GENERACIÓN */}
       {genError && (
         <div className="alert alert-danger" role="alert">
           {genError}
         </div>
       )}
 
-      {/* CONTENIDO DE LA PROPUESTA */}
-      {tienePropuesta ? (
-        Object.entries(expediente.propuesta_ia!).map(
-          ([key, val]: any) => (
-            <SeccionEditable
-              key={key}
-              seccion={key}
-              titulo={key.replace(/_/g, " ")}
-              texto={val?.texto ?? ""}
-              generando={generating}
-              onCambio={handleCambio}
-            />
-          )
-        )
-      ) : (
+      {!tienePropuesta ? (
         <div className="alert alert-secondary">
           <em>Sin generar aún.</em>
         </div>
+      ) : (
+        <>
+          <ul className="nav nav-tabs secciones-tabs flex-nowrap text-nowrap">
+            {secciones.map(([key]) => (
+              <li className="nav-item" key={key}>
+                <button
+                  type="button"
+                  className={`nav-link text-capitalize ${
+                    activa === key ? "active" : ""
+                  }`}
+                  onClick={() => setSeccionActiva(key)}
+                >
+                  <span className="d-inline-flex align-items-center gap-2">
+                    <span>{key.replace(/_/g, " ")}</span>
+                    {edits[key] !== undefined && (
+                      <span className="badge text-bg-warning" title="Cambios sin guardar">
+                        ●
+                      </span>
+                    )}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <div className="pt-3">
+            {activa && (
+              <SeccionEditable
+                key={activa}
+                seccion={activa}
+                titulo={activa.replace(/_/g, " ")}
+                texto={expediente.propuesta_ia?.[activa]?.texto ?? ""}
+                generando={generating}
+                onCambio={handleCambio}
+              />
+            )}
+          </div>
+        </>
       )}
     </>
   );

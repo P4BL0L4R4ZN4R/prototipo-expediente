@@ -1,0 +1,60 @@
+/* =========================================================
+   SeccionEditable — animación de colapso y detalles
+   ========================================================= */
+
+/* Header clickable */
+.seccion-header {
+  cursor: pointer;
+}
+
+/* Texto "Bloqueado mientras se genera..." — evita el click burbuja */
+.seccion-bloqueado {
+  cursor: default;
+}
+
+/* Chevron que rota al colapsar */
+.seccion-chevron {
+  display: inline-block;
+  transition: transform 0.25s ease;
+  transform: rotate(180deg);
+}
+
+.seccion-chevron-cerrado {
+  transform: rotate(0deg);
+}
+
+/* Animación de colapso con grid-template-rows */
+.seccion-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.3s ease;
+}
+
+.seccion-collapse-cerrado {
+  grid-template-rows: 0fr;
+}
+
+.seccion-collapse-inner {
+  overflow: hidden;
+}
+
+/* Fade del contenido al colapsar */
+.seccion-body {
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.seccion-body-oculto {
+  opacity: 0;
+}
+
+/* Textarea con autoajuste de altura */
+.seccion-textarea {
+  font-size: 14px;
+  font-family: inherit;
+  field-sizing: content;
+  min-height: 6rem;
+  max-height: 40rem;
+  resize: none;
+  overflow-y: auto;
+}

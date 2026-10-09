@@ -1,0 +1,27 @@
+/* =========================================================
+   SeccionesTabs — tabs horizontales para Propuesta y Entregable
+   ========================================================= */
+
+.secciones-tabs {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.secciones-tabs .nav-item {
+  flex-shrink: 0;
+}
+
+.secciones-tabs .nav-link {
+  font-size: 13px;
+}
+
+/* Scrollbar más discreta en WebKit */
+.secciones-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.secciones-tabs::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 3px;
+}

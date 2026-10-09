@@ -2,6 +2,13 @@
 
 import { ReactNode } from "react";
 import { Link } from "@inertiajs/react";
+import "@/../css/admin-layout.css";
+
+
+
+
+
+
 
 type Props = {
   children: ReactNode;
@@ -14,46 +21,19 @@ const navItems = [
 
 export default function AdminLayout({ children }: Props) {
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        fontFamily: "system-ui, sans-serif",
-        background: "#ffffff",
-        color: "#111111",
-      }}
-    >
+    <div className="d-flex vh-100 bg-white text-dark admin-layout">
       {/* Sidebar */}
-      <aside
-        style={{
-          width: 220,
-          padding: "20px 0",
-          borderRight: "1px solid #e5e5e5",
-        }}
-      >
-        <div
-          style={{
-            padding: "0 20px 20px",
-            fontSize: 18,
-            fontWeight: 600,
-            borderBottom: "1px solid #e5e5e5",
-            marginBottom: 16,
-          }}
-        >
+      <aside className="admin-sidebar d-flex flex-column">
+        <div className="px-3 pb-3 border-bottom mb-3 fs-5 fw-semibold">
           AdminPanel
         </div>
 
-        <nav style={{ display: "flex", flexDirection: "column" }}>
+        <nav className="d-flex flex-column">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              style={{
-                padding: "10px 20px",
-                textDecoration: "none",
-                color: "inherit",
-                fontSize: 14,
-              }}
+              className="admin-nav-link py-2 px-3 text-decoration-none text-dark"
             >
               {item.label}
             </Link>
@@ -62,10 +42,12 @@ export default function AdminLayout({ children }: Props) {
       </aside>
 
       {/* Contenido dinámico */}
-      <main style={{ flex: 1, padding: "24px 32px",  position: "relative" }}>
+      <main className="flex-grow-1 p-4 position-relative admin-main">
         {children}
       </main>
-      
+
+      {/* Barra de ventanas minimizadas (se llena automáticamente) */}
+      <div id="minimized-windows-bar" />
     </div>
   );
 }

@@ -1,16 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import FloatingWindow from "./FloatingWindow";
 import GeneralTab from "./GeneralTab";
 import PropuestaTab from "./PropuestaTab";
 import EntregableTab from "./EntregableTab";
-import { useExpediente, useExpedienteHandles } from "@/hooks";
-import { descargarZip } from "@/api/excelApi";
+import ExpedienteHeader from "./ExpedienteHeader";
+import { ExpedienteProvider } from "./ExpedienteContext";
+import { useExpedienteUI } from "../../hooks/useExpedienteUI";
+import { confirmar } from "@/utils/alert";
 import "@/../css/expediente.css";
 
 interface Props {
   idExpediente: string | null;
   open: boolean;
   onClose: () => void;
+  restoreKey?: number;
 }
 
 type Tab = "general" | "propuesta" | "entregable";
@@ -19,220 +22,92 @@ export default function ExpedienteWindow({
   idExpediente,
   open,
   onClose,
+  restoreKey,
 }: Props) {
-  const {
-    expediente,
-    loading,
-    error,
-    refrescar,
-    guardarMeta,
-  } = useExpediente(idExpediente, open);
-
+  const ui = useExpedienteUI(idExpediente, open);
   const [activeTab, setActiveTab] = useState<Tab>("general");
-  const [estado, setEstado] = useState("");
-  const [tema, setTema] = useState("");
-  const [area, setArea] = useState("");
 
-  // 👇 Estado de exportación (solo true/false, ya no hay progreso)
-  const [exportando, setExportando] = useState(false);
-
-  useEffect(() => {
-    if (expediente?.meta) {
-      setEstado(expediente.meta.estado ?? "");
-      setTema(expediente.meta.tema ?? "");
-      setArea(expediente.meta.area ?? "");
-    }
-  }, [expediente]);
-
-  const {
-    genError,
-    generatingPropuesta,
-    progresoPropuesta,
-    generatingEntregable,
-    progresoEntregable,
-    handleGenerarPropuesta,
-    handleGenerarEntregable,
-    handleGuardarPropuesta,
-    handleGuardarEntregable,
-  } = useExpedienteHandles({
-    idExpediente,
-    tema,
-    area,
-    estado,
-    guardarMeta,
-    refrescar,
-  });
-
-  // 👇 Handler del ZIP
-  const handleExportarTodo = () => {
-    if (!idExpediente) return;
-
-    setExportando(true);
-
-    // Dispara la descarga del ZIP
-    descargarZip(idExpediente);
-
-    // El navegador empieza a descargar en background;
-    // no hay callback real, así que liberamos el botón
-    // después de un momento.
-    setTimeout(() => setExportando(false), 1500);
+  const handleCerrar = async () => {
+    const result = await confirmar({
+      titulo: "¿Cerrar ventana?",
+      texto: "Si hay cambios sin guardar, se perderán.",
+      textoConfirmar: "Sí, cerrar",
+    });
+    if (result.isConfirmed) onClose();
   };
 
   return (
     <FloatingWindow
       title={`Expediente ${idExpediente ?? ""}`}
       open={open}
-      onClose={onClose}
+      onClose={handleCerrar}
+      restoreKey={restoreKey}
       width={950}
       height={700}
       initialX={80}
       initialY={80}
-      headerRight={
-        <select
-          className="form-select form-select-sm estado-select"
-          value={estado}
-          onChange={(e) => setEstado(e.target.value)}
-          title="Estado del expediente"
-        >
-          <option value="">Sin estado</option>
-          <option value="borrador">Borrador</option>
-          <option value="en_revision">En revisión</option>
-          <option value="aprobado">Aprobado</option>
-          <option value="finalizado">Finalizado</option>
-        </select>
-      }
     >
-      {loading && (
-        <div className="loading-container">
+      {ui.loading && (
+        <div className="text-center py-5">
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Cargando...</span>
           </div>
-          <p className="mt-3 text-muted">Cargando expediente...</p>
+          <p className="mt-3 text-muted mb-0">Cargando expediente...</p>
         </div>
       )}
 
-      {error && (
+      {ui.error && (
         <div className="alert alert-danger" role="alert">
-          {error}
+          {ui.error}
         </div>
       )}
 
-      {!loading && !error && expediente && (
-        <>
-          {/* Tabs */}
-          <div className="tabs-container">
-            <button
-              type="button"
-              className={`tab ${activeTab === "general" ? "active" : ""}`}
-              onClick={() => setActiveTab("general")}
-            >
-              General
-            </button>
-
-            <button
-              type="button"
-              className={`tab ${activeTab === "propuesta" ? "active" : ""}`}
-              onClick={() => setActiveTab("propuesta")}
-            >
-              Propuesta
-            </button>
-
-            <button
-              type="button"
-              className={`tab ${activeTab === "entregable" ? "active" : ""}`}
-              onClick={() => setActiveTab("entregable")}
-            >
-              Entregable
-            </button>
-          </div>
-
-          {/* Barra de acciones (fuera de los tabs) */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 12,
-            }}
-          >
-            <button
-              type="button"
-              className="btn btn-sm btn-success"
-              onClick={handleGenerarPropuesta}
-              disabled={
-                !tema ||
-                !area ||
-                generatingPropuesta ||
-                generatingEntregable
-              }
-            >
-              {generatingPropuesta ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2" />
-                  {progresoPropuesta ?? "Generando..."}
-                </>
-              ) : (
-                "Generar Propuesta"
-              )}
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-primary"
-              onClick={handleExportarTodo}
-              disabled={!idExpediente || exportando}
-              title="Descarga los 7 documentos Word en un ZIP"
-            >
-              {exportando ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2" />
-                  Generando ZIP...
-                </>
-              ) : (
-                "Exportar todo (ZIP)"
-              )}
-            </button>
-          </div>
-
-          {/* Contenido */}
-          {activeTab === "general" && (
-            <GeneralTab expediente={expediente} />
-          )}
-
-          {activeTab === "propuesta" && (
-            <PropuestaTab
-              expediente={expediente}
-              tema={tema}
-              area={area}
-              generating={generatingPropuesta}
-              progreso={progresoPropuesta}
-              genError={genError}
-              onTemaChange={setTema}
-              onAreaChange={setArea}
-              onGenerar={handleGenerarPropuesta}
-              onGenerarEntregable={async () => {
-                await handleGenerarEntregable();
-                setActiveTab("entregable");
-              }}
-              onGuardarSecciones={handleGuardarPropuesta}
+      {!ui.loading && !ui.error && ui.expediente && (
+        <ExpedienteProvider
+          value={{
+            expediente: ui.expediente,
+            estado: ui.estado,
+            setEstado: ui.setEstado,
+            guardarEstado: ui.guardarEstado,
+            guardandoEstado: ui.guardandoEstado,
+            tema: ui.tema,
+            setTema: ui.setTema,
+            area: ui.area,
+            setArea: ui.setArea,
+            genError: ui.genError,
+            generatingPropuesta: ui.generatingPropuesta,
+            progresoPropuesta: ui.progresoPropuesta,
+            generatingEntregable: ui.generatingEntregable,
+            progresoEntregable: ui.progresoEntregable,
+            generarPropuesta: ui.handleGenerarPropuesta,
+            generarEntregable: ui.handleGenerarEntregable,
+            guardarPropuesta: ui.handleGuardarPropuesta,
+            guardarEntregable: ui.handleGuardarEntregable,
+          }}
+        >
+          <div className="border rounded-3 overflow-hidden">
+            <ExpedienteHeader
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              onExport={ui.exportarZip}
+              exportando={ui.exportando}
+              disabledExport={!idExpediente}
             />
-          )}
 
-          {activeTab === "entregable" && (
-            <EntregableTab
-              expediente={expediente}
-              tema={tema}
-              area={area}
-              generating={generatingEntregable}
-              progreso={progresoEntregable}
-              genError={genError}
-              onTemaChange={setTema}
-              onAreaChange={setArea}
-              onGenerar={handleGenerarEntregable}
-              onGuardarSecciones={handleGuardarEntregable}
-            />
-          )}
-        </>
+            <div className="p-3 bg-white">
+              {activeTab === "general" && <GeneralTab />}
+              {activeTab === "propuesta" && (
+                <PropuestaTab
+                  onGenerarEntregable={async () => {
+                    await ui.handleGenerarEntregable();
+                    setActiveTab("entregable");
+                  }}
+                />
+              )}
+              {activeTab === "entregable" && <EntregableTab />}
+            </div>
+          </div>
+        </ExpedienteProvider>
       )}
     </FloatingWindow>
   );

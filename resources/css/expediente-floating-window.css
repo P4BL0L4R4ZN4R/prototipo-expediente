@@ -1,0 +1,164 @@
+/* =========================================================
+   FloatingWindow — estilos estructurales
+   ========================================================= */
+
+/* ── Header ─────────────────────────────────────────────── */
+.fw-window-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  user-select: none;
+  gap: 12px;
+  flex-shrink: 0;
+  font-size: 15px;
+}
+
+.fw-window-header-static {
+  cursor: default;
+}
+
+.fw-window-header-draggable {
+  cursor: move;
+}
+
+/* ── Botones de icono del header ────────────────────────── */
+.fw-window-icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+  color: #6b7280;
+  padding: 4px;
+  font-size: 16px;
+}
+
+.fw-window-icon-btn:hover {
+  color: #111827;
+}
+
+.fw-window-close-btn {
+  font-size: 20px;
+}
+
+/* ── Body ───────────────────────────────────────────────── */
+.fw-window-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* ── Contenedor maximizado ──────────────────────────────── */
+.fw-window-maximized {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fw-window-maximized-absolute {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+}
+
+.fw-window-maximized-fixed {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+/* ── Contenedor flotante (Rnd) ──────────────────────────── */
+.fw-window-floating {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.20);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* =========================================================
+   Modo minimizado
+   ========================================================= */
+
+/* ── Barra contenedora (donde se apilan las ventanas) ───── */
+#minimized-windows-bar {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: flex-end;
+
+  max-width: calc(100vw - 32px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px;
+  scrollbar-width: thin;
+}
+
+#minimized-windows-bar::-webkit-scrollbar {
+  height: 6px;
+}
+
+#minimized-windows-bar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+/* ── Cada ventana minimizada ────────────────────────────── */
+.fw-window-minimized {
+  flex-shrink: 0;
+  width: 260px;
+  height: 44px;
+  background: var(--bs-primary);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Fallback cuando no existe #minimized-windows-bar */
+.fw-window-minimized-wrap {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  width: 260px;
+  height: 44px;
+}
+
+/* ── Header de la ventana minimizada ────────────────────── */
+.fw-window-header-minimized {
+  background: var(--bs-primary);
+  color: #fff;
+  border-bottom: none;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.fw-window-header-minimized .fw-window-icon-btn {
+  color: #fff;
+}
+
+.fw-window-header-minimized .fw-window-icon-btn:hover {
+  color: rgba(255, 255, 255, 0.7);
+}

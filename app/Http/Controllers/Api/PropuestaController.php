@@ -134,23 +134,6 @@ class PropuestaController extends Controller
     }
 
 
-    // private function guardarSeccion(string $id, string $seccion, array $payload): void
-    // {
-    //     $path = "expedientes/{$id}/propuesta/{$seccion}.json";
-
-    //     Storage::makeDirectory("expedientes/{$id}/propuesta");
-
-    //     Storage::put($path, json_encode([
-    //         'ok'          => $payload['ok']          ?? false,
-    //         'texto'       => $payload['texto']       ?? '',
-    //         'proveedor'   => $payload['proveedor']   ?? null,
-    //         'modelo'      => $payload['modelo']      ?? null,
-    //         'tiempo_ms'   => $payload['tiempo_ms']   ?? null,
-    //         'generado_en' => $payload['generado_en'] ?? now()->toIso8601String(),
-    //     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-    // }
-
-
 
     // =========================================================
     // PROMPTS

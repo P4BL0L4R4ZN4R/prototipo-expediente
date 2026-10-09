@@ -18,6 +18,7 @@ class ExcelController extends Controller
 
     public function index()
     {
+        $t0 = microtime(true);
         return response()->json(
             Expediente::query()
                 ->orderByDesc('created_at')
@@ -39,11 +40,18 @@ class ExcelController extends Controller
 
     public function data(string $id)
     {
+
         $expediente = Expediente::find($id);
+        $t0 = microtime(true);
 
         if (!$expediente) {
             return response()->json(['error' => 'No encontrado'], 404);
         }
+
+        Log::info('Tiempo total endpoint', [
+            'id' => $id,
+            'ms' => (microtime(true) - $t0) * 1000,
+        ]);
 
         return response()->json($expediente->data);
     }
@@ -89,10 +97,16 @@ class ExcelController extends Controller
     public function show(string $id)
     {
         $expediente = Expediente::find($id);
+        $t0 = microtime(true);
 
         if (!$expediente) {
             return response()->json(['error' => 'No encontrado'], 404);
         }
+
+        Log::info('Tiempo total endpoint', [
+            'id' => $id,
+            'ms' => (microtime(true) - $t0) * 1000,
+        ]);
 
         return response()->json([
             'id'            => $expediente->id,

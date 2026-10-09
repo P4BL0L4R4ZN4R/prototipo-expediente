@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "@/../css/SeccionEditable.css";
 
 interface Props {
   seccion: string;
@@ -31,20 +32,16 @@ export default function SeccionEditable({
   return (
     <div className="card mb-3 shadow-sm">
       <div
-        className="card-header d-flex justify-content-between align-items-center"
+        className="card-header d-flex justify-content-between align-items-center seccion-header"
         role="button"
         onClick={() => setMinimizada((prev) => !prev)}
-        style={{ cursor: "pointer" }}
       >
-        <span className="fw-bold text-capitalize">
-          {titulo}
-        </span>
+        <span className="fw-bold text-capitalize">{titulo}</span>
 
         <div className="d-flex align-items-center gap-2">
           {generando && (
             <span
-              className="text-muted"
-              style={{ fontSize: 12 }}
+              className="text-muted small seccion-bloqueado"
               onClick={(e) => e.stopPropagation()}
             >
               Bloqueado mientras se genera…
@@ -52,46 +49,28 @@ export default function SeccionEditable({
           )}
 
           <span
-            className="text-muted"
-            style={{
-              display: "inline-block",
-              transition: "transform 0.25s ease",
-              transform: minimizada
-                ? "rotate(0deg)"
-                : "rotate(180deg)",
-            }}
+            className={`text-muted seccion-chevron ${
+              minimizada ? "seccion-chevron-cerrado" : ""
+            }`}
           >
             ▼
           </span>
         </div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateRows: minimizada ? "0fr" : "1fr",
-          transition: "grid-template-rows 0.3s ease",
-        }}
-      >
-        <div style={{ overflow: "hidden" }}>
+      <div className={`seccion-collapse ${minimizada ? "seccion-collapse-cerrado" : ""}`}>
+        <div className="seccion-collapse-inner">
           <div
-            className="card-body"
-            style={{
-              opacity: minimizada ? 0 : 1,
-              transition: "opacity 0.2s ease",
-            }}
+            className={`card-body seccion-body ${
+              minimizada ? "seccion-body-oculto" : ""
+            }`}
           >
             <textarea
-              className="form-control"
+              className="form-control seccion-textarea"
               value={valor}
               onChange={handleChange}
               disabled={generando}
               rows={Math.max(4, valor.split("\n").length)}
-              style={{
-                fontSize: 14,
-                fontFamily: "inherit",
-                resize: "vertical",
-              }}
             />
           </div>
         </div>

@@ -1,22 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import AdminLayout from "@/layouts/main";
-import { subirExcel, listarExpedientes } from "@/api/excelApi";
+import { subirExcel, listarExpedientes, eliminarExpediente } from "@/api/excelApi";
 import ExpedienteWindow from "@/components/expediente/ExpedienteWindow";
+import "../../../css/prototipo.css";
+import { confirmar, exito, error as toastError } from "@/utils/alert";
+
 
 type ExpedienteResumen = {
   id: string;
   path?: string;
 };
 
+type VentanaAbierta = {
+  id: string;
+  restoreKey: number;
+};
+
+
+
+
 export default function Index() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expedientes, setExpedientes] = useState<ExpedienteResumen[]>([]);
+  const [dragging, setDragging] = useState(false);
 
-  // Estado de la ventana
-  const [windowOpen, setWindowOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [ventanas, setVentanas] = useState<VentanaAbierta[]>([]);
+
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     listarExpedientes()
@@ -33,17 +45,10 @@ export default function Index() {
 
     try {
       const { id } = await subirExcel(file);
-
-      // refresca la lista para que aparezca el nuevo expediente
       const lista = await listarExpedientes();
       setExpedientes(lista);
-
-      // limpia el input
       setFile(null);
-
-      // abre la ventana con el expediente recién creado
-      setSelectedId(id);
-      setWindowOpen(true);
+      abrirVentana(id);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -51,105 +56,144 @@ export default function Index() {
     }
   };
 
-  const abrirVentana = (id: string) => {
-    setSelectedId(id);
-    setWindowOpen(true);
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped) setFile(dropped);
   };
 
-  const cerrarVentana = () => {
-    setWindowOpen(false);
+  const abrirVentana = (id: string) => {
+    setVentanas((prev) => {
+      const yaExiste = prev.some((v) => v.id === id);
+      if (yaExiste) {
+        return prev.map((v) =>
+          v.id === id ? { ...v, restoreKey: v.restoreKey + 1 } : v
+        );
+      }
+      return [...prev, { id, restoreKey: 0 }];
+    });
   };
+
+
+
+
+  const cerrarVentana = (id: string) => {
+    setVentanas((prev) => prev.filter((v) => v.id !== id));
+  };
+
+
+  const handleEliminar = async (id: string) => {
+    const result = await confirmar({
+      titulo: "¿Eliminar expediente?",
+      texto: `Se borrará ${id} y todos sus archivos. Esta acción no se puede deshacer.`,
+      textoConfirmar: "Sí, eliminar",
+      colorConfirmar: "#d33",
+    });
+  
+    if (!result.isConfirmed) return;
+  
+    try {
+      await eliminarExpediente(id);
+      setExpedientes((prev) => prev.filter((e) => e.id !== id));
+      setVentanas((prev) => prev.filter((v) => v.id !== id));
+      exito({ mensaje: "Expediente eliminado" });
+    } catch (err: any) {
+      toastError({ mensaje: err.message || "No se pudo eliminar" });
+    }
+  };
+  
+  
 
   return (
     <AdminLayout>
       <div style={{ maxWidth: 960 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 6 }}>
-          Expedientes
-        </h1>
-        <p style={{ color: "#666", fontSize: 14, marginBottom: 24 }}>
+        <h1 className="fs-4 fw-semibold mb-1">Expedientes</h1>
+        <p className="text-secondary small mb-4">
           Sube un Excel para crear un expediente o consulta los existentes.
         </p>
 
         {/* Formulario de subida */}
-        <div
-          style={{
-            border: "1px solid #e5e5e5",
-            borderRadius: 8,
-            padding: 20,
-            marginBottom: 24,
-          }}
-        >
-          <form
-            onSubmit={handleSubmit}
-            style={{ display: "flex", flexDirection: "column", gap: 14 }}
+        <form onSubmit={handleSubmit} className="mb-4">
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            onClick={() => inputRef.current?.click()}
+            className={`dropzone ${dragging ? "dropzone-active" : ""}`}
           >
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: 13,
-                  fontWeight: 500,
-                  marginBottom: 6,
-                }}
-              >
-                Archivo Excel
-              </label>
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                style={{ fontSize: 14 }}
-              />
-            </div>
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="d-none"
+            />
 
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <button
-                type="submit"
-                disabled={!file || loading}
-                style={{
-                  background: loading || !file ? "#ccc" : "#111",
-                  color: "#fff",
-                  border: "none",
-                  padding: "8px 18px",
-                  borderRadius: 6,
-                  cursor: loading || !file ? "not-allowed" : "pointer",
-                  fontSize: 14,
-                  fontWeight: 500,
-                }}
-              >
-                {loading ? "Procesando..." : "Procesar"}
-              </button>
-
-              {file && (
-                <span style={{ fontSize: 13, color: "#666" }}>{file.name}</span>
+            <div className={`icon-circle ${file ? "icon-circle-filled" : ""}`}>
+              {file ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
               )}
             </div>
 
-            {error && (
-              <p style={{ color: "#c00", fontSize: 13, margin: 0 }}>{error}</p>
+            {file ? (
+              <>
+                <p className="fw-medium mb-0">{file.name}</p>
+                <p className="text-secondary small mb-0">
+                  {(file.size / 1024).toFixed(1)} KB · Click para cambiar
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="fw-medium mb-0">Arrastrar aqui</p>
+                <p className="text-secondary small mb-0">
+                  o <span className="text-decoration-underline">selecciónalo</span> desde tu equipo · formatos admitidos .xlsx, .xls
+                </p>
+              </>
             )}
-          </form>
-        </div>
+          </div>
+
+          <div className="d-flex align-items-center gap-3 mt-3">
+            <button
+              type="submit"
+              disabled={!file || loading}
+              className="btn btn-dark"
+            >
+              {loading ? "Procesando..." : "Procesar archivo"}
+            </button>
+
+            {file && !loading && (
+              <button
+                type="button"
+                onClick={() => setFile(null)}
+                className="btn btn-link text-secondary p-0 text-decoration-underline"
+              >
+                Remover
+              </button>
+            )}
+          </div>
+
+          {error && <p className="text-danger small mt-2">{error}</p>}
+        </form>
 
         {/* Tabla de expedientes */}
-        <div
-          style={{
-            border: "1px solid #e5e5e5",
-            borderRadius: 8,
-            overflow: "hidden",
-          }}
-        >
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: 14,
-            }}
-          >
-            <thead>
-              <tr style={{ background: "#f9fafb" }}>
-                <th style={thStyle}>ID</th>
-                <th style={{ ...thStyle, textAlign: "right", width: 220 }}>
+        <div className="border rounded-3 overflow-hidden">
+          <table className="table table-hover align-middle mb-0">
+            <thead className="table-light">
+              <tr>
+                <th className="text-uppercase small text-secondary fw-semibold">ID</th>
+                <th className="text-end text-uppercase small text-secondary fw-semibold" style={{ width: 220 }}>
                   Acciones
                 </th>
               </tr>
@@ -157,30 +201,27 @@ export default function Index() {
             <tbody>
               {expedientes.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={2}
-                    style={{
-                      ...tdStyle,
-                      textAlign: "center",
-                      color: "#888",
-                      padding: 24,
-                    }}
-                  >
+                  <td colSpan={2} className="text-center text-secondary py-4">
                     No hay expedientes todavía.
                   </td>
                 </tr>
               ) : (
                 expedientes.map((exp) => (
-                  <tr key={exp.id} style={{ borderTop: "1px solid #f0f0f0" }}>
-                    <td style={tdStyle}>{exp.id}</td>
-                    <td style={{ ...tdStyle, textAlign: "right" }}>
+                  <tr key={exp.id}>
+                    <td>{exp.id}</td>
+                    <td className="text-end">
                       <button
-                        style={btnGhost}
+                        className="btn btn-sm btn-outline-secondary"
                         onClick={() => abrirVentana(exp.id)}
                       >
                         Editar
                       </button>
-                      <button style={btnDanger} disabled title="Pendiente">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger ms-2"
+                        onClick={() => handleEliminar(exp.id)}
+                        title="Eliminar expediente"
+                      >
                         Eliminar
                       </button>
                     </td>
@@ -192,52 +233,16 @@ export default function Index() {
         </div>
       </div>
 
-      {/* Ventana flotante */}
-      <ExpedienteWindow
-        idExpediente={selectedId}
-        open={windowOpen}
-        onClose={cerrarVentana}
-      />
+      {/* Ventanas abiertas */}
+      {ventanas.map((v) => (
+        <ExpedienteWindow
+          key={v.id}
+          idExpediente={v.id}
+          open={true}
+          restoreKey={v.restoreKey}
+          onClose={() => cerrarVentana(v.id)}
+        />
+      ))}
     </AdminLayout>
   );
 }
-
-// ─── Estilos inline ─────────────────────────────────────
-const thStyle: React.CSSProperties = {
-  textAlign: "left",
-  padding: "12px 16px",
-  fontSize: 12,
-  fontWeight: 600,
-  color: "#6b7280",
-  textTransform: "uppercase",
-  letterSpacing: "0.04em",
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: "12px 16px",
-  fontSize: 14,
-  color: "#111827",
-};
-
-const btnGhost: React.CSSProperties = {
-  background: "transparent",
-  color: "#374151",
-  border: "1px solid #d1d5db",
-  padding: "5px 12px",
-  borderRadius: 6,
-  fontSize: 13,
-  cursor: "pointer",
-  marginLeft: 6,
-};
-
-const btnDanger: React.CSSProperties = {
-  background: "transparent",
-  color: "#b91c1c",
-  border: "1px solid #fecaca",
-  padding: "5px 12px",
-  borderRadius: 6,
-  fontSize: 13,
-  cursor: "not-allowed",
-  marginLeft: 6,
-  opacity: 0.6,
-};
