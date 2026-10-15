@@ -1,3 +1,7 @@
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faFileZipper } from "@fortawesome/free-solid-svg-icons";
+import "@/../css/tooltip.css";
+
 type Tab = "general" | "propuesta" | "entregable";
 
 interface Props {
@@ -21,8 +25,10 @@ export default function ExpedienteHeader({
   exportando,
   disabledExport,
 }: Props) {
+  const deshabilitado = disabledExport || exportando;
+
   return (
-    <div className="d-flex justify-content-between align-items-center bg-primary px-3 pt-2 border-bottom">
+    <div className="position-relative bg-primary px-3 pt-3 border-bottom">
       <ul className="nav nav-tabs border-0">
         {TABS.map((t) => (
           <li className="nav-item" key={t.id}>
@@ -41,22 +47,63 @@ export default function ExpedienteHeader({
         ))}
       </ul>
 
-      <button
-        type="button"
-        className="btn btn-sm btn-outline-light mb-2"
-        onClick={onExport}
-        disabled={disabledExport || exportando}
-        title="Descarga los 7 documentos Word en un ZIP"
-      >
-        {exportando ? (
-          <>
-            <span className="spinner-border spinner-border-sm me-2" />
-            Generando ZIP...
-          </>
-        ) : (
-          "Exportar todo (ZIP)"
-        )}
-      </button>
+      <div className="position-absolute" style={{ top: 8, right: 50 }}>
+        <div className="tooltip-wrapper">
+          <button
+            type="button"
+            onClick={onExport}
+            disabled={deshabilitado}
+            style={{
+              width: 40,
+              height: 40,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "none",
+              borderRadius: 6,
+              background: "transparent",
+              color: "#fff",
+              fontSize: 22,
+              cursor: deshabilitado ? "not-allowed" : "pointer",
+              opacity: deshabilitado ? 0.5 : 1,
+              transition: "background-color 0.15s ease, color 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              if (deshabilitado) return;
+              e.currentTarget.style.background = "#fff";
+              e.currentTarget.style.color = "#0d6efd";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "#fff";
+            }}
+          >
+            {exportando ? (
+              <span
+                style={{
+                  width: 18,
+                  height: 18,
+                  border: "2px solid currentColor",
+                  borderRightColor: "transparent",
+                  borderRadius: "50%",
+                  animation: "spin 0.7s linear infinite",
+                  display: "inline-block",
+                }}
+              />
+            ) : (
+              <FontAwesomeIcon icon={faFileZipper} />
+            )}
+          </button>
+
+          <span className="tooltip-bubble">Descargar ZIP</span>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

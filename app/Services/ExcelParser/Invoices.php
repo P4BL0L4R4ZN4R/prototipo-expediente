@@ -10,10 +10,7 @@ class Invoices
 
         $colConcept = array_search('Concepto', $headers);
         $colAmount  = array_search('Total Factura ($)', $headers);
-        $colInvoice = array_search('No. Factura', $headers);
-        $colFolio   = array_search('Folio Fiscal', $headers);
         $colDate    = array_search('Fecha', $headers);
-        $colNotes   = array_search('Observaciones', $headers);
 
         $invoices = [];
         $currentConcept = 0;
@@ -38,10 +35,7 @@ class Invoices
             $invoices[] = [
                 'concepto_orden' => $currentConcept,
                 'total_factura'  => (float) $amount,
-                'no_factura'     => trim((string) ($row[$colInvoice] ?? '')),
-                'folio_fiscal'   => trim((string) ($row[$colFolio] ?? '')),
                 'fecha'          => $this->toDate($row[$colDate] ?? null),
-                'observaciones'  => trim((string) ($row[$colNotes] ?? '')),
             ];
         }
 

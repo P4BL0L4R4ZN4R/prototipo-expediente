@@ -6,74 +6,51 @@ use App\Models\Expediente;
 
 class PropuestaStorage
 {
-    public const SECCIONES = [
-        'texto_propuesta',
-        'introduccion',
-        'problematica',
-        'objetivo_general',
-        'objetivos_especificos',
-        'metodologia',
-    ];
+    public function __construct(
+        private ExpedienteTextoStorage $textoStorage,
+    ) {}
 
-    /** Guarda una sección individual. */
-    public function guardarSeccion(string $id, string $seccion, array $payload): void
+    /**
+     * Guarda una sección de la propuesta.
+     * Ahora escribe en archivo, no en BD.
+     */
+    public function guardarSeccion(string $id, string $seccion, array $payload): bool
     {
-        $exp = Expediente::find($id);
-        if (!$exp) return;
+        $texto = $payload['texto'] ?? '';
+        if ($texto === '') return false;
 
-        $propuesta = $exp->propuesta_ia ?? [];
-
-        $propuesta[$seccion] = [
-            'ok'          => $payload['ok']          ?? false,
-            'texto'       => $payload['texto']       ?? '',
-            'proveedor'   => $payload['proveedor']   ?? null,
-            'modelo'      => $payload['modelo']      ?? null,
-            'tiempo_ms'   => $payload['tiempo_ms']   ?? null,
-            'generado_en' => $payload['generado_en'] ?? now()->toIso8601String(),
-        ];
-
-        $exp->propuesta_ia = $propuesta;
-        $exp->save();
+        return $this->textoStorage->guardarSeccion($id, 'propuesta', $seccion, $texto);
     }
 
-    /** Lee una sección individual. */
-    public function leerSeccion(string $id, string $seccion): ?array
+    /**
+     * Lee una sección de la propuesta.
+     * Ahora lee del archivo, no de BD.
+     */
+    public function leerSeccion(string $id, string $seccion): string
     {
-        $exp = Expediente::find($id);
-        if (!$exp) return null;
-
-        $propuesta = $exp->propuesta_ia ?? [];
-        return $propuesta[$seccion] ?? null;
+        return $this->textoStorage->leerSeccion($id, 'propuesta', $seccion);
     }
 
-    /** Devuelve todas las secciones consolidadas (texto plano). */
+    /**
+     * Devuelve TODAS las secciones de la propuesta con su texto.
+     * Usado por EntregableController::construirContexto().
+     */
     public function leerConsolidado(string $id): array
     {
-        $exp = Expediente::find($id);
-
-        $consolidado = [
-            'texto_propuesta'       => '',
-            'introduccion'          => '',
-            'problematica'          => '',
-            'objetivo_general'      => '',
-            'objetivos_especificos' => '',
-            'metodologia'           => '',
+        $secciones = [
+            'texto_propuesta',
+            'introduccion',
+            'problematica',
+            'objetivo_general',
+            'objetivos_especificos',
+            'metodologia',
         ];
 
-        if (!$exp) return $consolidado;
-
-        $propuesta = $exp->propuesta_ia  ?? [];
-
-        foreach (self::SECCIONES as $sec) {
-            $consolidado[$sec] = $propuesta[$sec]['texto'] ?? '';
+        $resultado = [];
+        foreach ($secciones as $seccion) {
+            $resultado[$seccion] = $this->textoStorage->leerSeccion($id, 'propuesta', $seccion);
         }
 
-        return $consolidado;
-    }
-
-    /** Compatibilidad con código viejo: ya no consolida en disco. */
-    public function consolidar(string $id): array
-    {
-        return $this->leerConsolidado($id);
+        return $resultado;
     }
 }

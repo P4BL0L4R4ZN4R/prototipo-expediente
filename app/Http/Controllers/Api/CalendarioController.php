@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-// use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Models\Expediente;
@@ -11,8 +10,6 @@ use App\Models\Expediente;
 
 class CalendarioController extends Controller
 {
-
-
     public function show(string $id)
     {
         $exp = Expediente::find($id);
@@ -22,43 +19,35 @@ class CalendarioController extends Controller
         }
 
         $data = $exp->data ?? [];
+        $ia   = $exp->ia   ?? [];
 
         return response()->json([
             'id'    => $id,
-            'filas' => $this->filas($data),
+            'filas' => $this->filas($data, $ia),
         ]);
     }
 
-    public function filas(array $data): array
+    public function filas(array $data, array $ia = []): array
     {
-        // ============================================================
-        // LOG 1: qué conceptos llegan y con qué fechas
-        // ============================================================
-        $resumenFechas = collect($data['conceptos'] ?? [])
-            ->map(function ($c) {
-                return [
-                    'orden'  => $c['orden'] ?? '?',
-                    'fechas' => collect($c['facturas'] ?? [])
-                        ->pluck('fecha')->filter()->unique()->sort()->values()->all(),
-                ];
-            })->all();
-
-        \Log::info('[Calendario] Conceptos con sus fechas', [
-            'total'    => count($resumenFechas),
-            'detalle'  => $resumenFechas,
-        ]);
+        // ✅ Mapa orden → concepto desde ia.conceptos
+        $conceptosPorOrden = collect($ia['conceptos'] ?? [])
+            ->keyBy('orden')
+            ->map(fn($c) => $c['concepto'] ?? '')
+            ->all();
 
         // 1. Construir bloques
         $bloques = collect($data['conceptos'] ?? [])
-            ->map(function ($c, $i) {
+            ->map(function ($c, $i) use ($conceptosPorOrden) {
+                $orden = $c['orden'] ?? ($i + 1);
+
                 $fechas = collect($c['facturas'] ?? [])
                     ->pluck('fecha')->filter()
                     ->map(fn($f) => Carbon::parse($f)->toDateString())
                     ->unique()->values()->all();
 
                 return [
-                    'numero'    => $c['orden']   ?? ($i + 1),
-                    'actividad' => $c['proceso'] ?? '',
+                    'numero'    => $orden,
+                    'actividad' => $conceptosPorOrden[$orden] ?? '',
                     'fechas'    => $fechas,
                 ];
             })
@@ -75,26 +64,9 @@ class CalendarioController extends Controller
         $grupoActual = [$bloques[0]];
         $fechasGrupo = $bloques[0]['fechas'];
 
-        // ============================================================
-        // LOG 2: decisión de agrupación paso a paso
-        // ============================================================
-        \Log::info('[Calendario] Iniciando agrupación', [
-            'concepto_inicial' => $bloques[0]['numero'],
-            'fechas_iniciales' => $fechasGrupo,
-        ]);
-
         foreach (array_slice($bloques, 1) as $bloque) {
             $fechasBloque = $bloque['fechas'];
             $interseccion = array_intersect($fechasGrupo, $fechasBloque);
-
-            // 👇 LOG por cada comparación
-            \Log::info('[Calendario] Comparando concepto', [
-                'concepto'       => $bloque['numero'],
-                'fechas_concepto'=> $fechasBloque,
-                'fechas_grupo'   => $fechasGrupo,
-                'interseccion'   => array_values($interseccion),
-                'decision'       => !empty($interseccion) ? 'MISMO GRUPO' : 'NUEVO GRUPO',
-            ]);
 
             if (!empty($interseccion)) {
                 $grupoActual[] = $bloque;
@@ -106,19 +78,6 @@ class CalendarioController extends Controller
             }
         }
         $grupos[] = ['bloques' => $grupoActual, 'fechas' => $fechasGrupo];
-
-        // ============================================================
-        // LOG 3: cuántos grupos se formaron
-        // ============================================================
-        \Log::info('[Calendario] Grupos formados', [
-            'total_grupos' => count($grupos),
-            'grupos'       => collect($grupos)->map(fn($g, $i) => [
-                'grupo'          => $i + 1,
-                'num_conceptos'  => count($g['bloques']),
-                'conceptos'      => collect($g['bloques'])->pluck('numero')->all(),
-                'fechas'         => $g['fechas'],
-            ])->all(),
-        ]);
 
         // 3. Calcular inicio y fin de cada grupo
         $iniciosGrupos = array_map(
@@ -157,14 +116,6 @@ class CalendarioController extends Controller
             })
             ->values()
             ->all();
-
-        // ============================================================
-        // LOG 4: filas finales que se mandan al Word
-        // ============================================================
-        \Log::info('[Calendario] Filas finales', [
-            'total' => count($filas),
-            'filas' => $filas,
-        ]);
 
         return $filas;
     }
@@ -224,5 +175,4 @@ class CalendarioController extends Controller
     {
         return $this->primerLunes($year, $month)->addDays(14);
     }
-    
 }

@@ -62,13 +62,13 @@ Route::prefix('prototipo/excel')->group(function () {
     // PROPUESTA: generación IA + Word
     // =========================================================
     Route::prefix('propuesta/{id}')->group(function () {
-        Route::get('texto-propuesta',       [PropuestaController::class, 'textoPropuesta']);
-        Route::get('introduccion',          [PropuestaController::class, 'introduccion']);
-        Route::get('problematica',          [PropuestaController::class, 'problematica']);
-        Route::get('objetivo-general',      [PropuestaController::class, 'objetivoGeneral']);
-        Route::get('objetivos-especificos', [PropuestaController::class, 'objetivosEspecificos']);
-        Route::get('metodologia',           [PropuestaController::class, 'metodologia']);
-        Route::get('generar-todo',          [TestPropuestaController::class, 'generarTodo']);
+        Route::post('texto-propuesta',       [PropuestaController::class, 'textoPropuesta']);
+        Route::post('introduccion',          [PropuestaController::class, 'introduccion']);
+        Route::post('problematica',          [PropuestaController::class, 'problematica']);
+        Route::post('objetivo-general',      [PropuestaController::class, 'objetivoGeneral']);
+        Route::post('objetivos-especificos', [PropuestaController::class, 'objetivosEspecificos']);
+        Route::post('metodologia',           [PropuestaController::class, 'metodologia']);
+        Route::post('generar-todo',          [TestPropuestaController::class, 'generarTodo']);
         Route::get('word',                  [PropuestaWordController::class, 'export']);
     });
 
@@ -76,10 +76,12 @@ Route::prefix('prototipo/excel')->group(function () {
     // ENTREGABLE: generación IA + Word
     // =========================================================
     Route::prefix('entregable/{id}')->group(function () {
-        Route::get('introduccion',          [EntregableController::class, 'introduccion']);
-        Route::get('problematica',          [EntregableController::class, 'problematica']);
-        Route::get('desarrollo-conceptos',  [EntregableController::class, 'desarrolloConceptos']);
-        Route::get('generar-todo',          [EntregableController::class, 'generarTodo']);  // ← nueva
+        Route::post('introduccion',          [EntregableController::class, 'introduccion']);
+        Route::post('problematica',          [EntregableController::class, 'problematica']);
+        Route::post('desarrollo-conceptos',  [EntregableController::class, 'desarrolloConceptos']);
+        Route::post('finalizacion-servicio', [EntregableController::class, 'finalizacionServicio']);
+        Route::post('retrospectiva', [EntregableController::class, 'retrospectiva']);
+        // Route::get('generar-todo',          [EntregableController::class, 'generarTodo']);  // ← sin uso
         Route::get('word',                  [EntregableWordController::class, 'export']);
     });
 

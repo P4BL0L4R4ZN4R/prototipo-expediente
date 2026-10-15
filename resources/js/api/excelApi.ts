@@ -132,7 +132,10 @@ export async function generarPropuestaSeccion(
   id: string,
   seccion: string
 ): Promise<any> {
-  return fetchJson(`${BASE}/propuesta/${id}/${seccion}`);
+  return fetchJson(`${BASE}/propuesta/${id}/${seccion}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 // =========================================================
@@ -145,11 +148,15 @@ export const SECCIONES_ENTREGABLE = [
   { key: "desarrollo-conceptos", label: "Desarrollo conceptos" },
 ] as const;
 
+
 export async function generarEntregableSeccion(
   id: string,
   seccion: string
 ): Promise<any> {
-  return fetchJson(`${BASE}/entregable/${id}/${seccion}`);
+  return fetchJson(`${BASE}/entregable/${id}/${seccion}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 // =========================================================

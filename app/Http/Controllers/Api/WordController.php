@@ -40,13 +40,13 @@ abstract class WordController extends Controller
             return response()->json(['error' => 'Expediente incompleto'], 500);
         }
 
-        Log::info('WORD · datos recibidos', [
-            'id'        => $id,
-            'clase'     => static::class,
-            'plantilla' => $this->plantilla(),
-            'ia'        => $ia,
-            'data'      => $data,
-        ]);
+        // Log::info('WORD · datos recibidos', [
+        //     'id'        => $id,
+        //     'clase'     => static::class,
+        //     'plantilla' => $this->plantilla(),
+        //     'ia'        => $ia,
+        //     'data'      => $data,
+        // ]);
 
         // 2. Resolver plantilla
         $templatePath = storage_path('app/' . $this->plantilla());

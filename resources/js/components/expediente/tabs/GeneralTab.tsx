@@ -1,4 +1,13 @@
-import { useExpedienteContext } from "./ExpedienteContext";
+import Select from "react-select";
+import { useExpedienteContext } from "../context/ExpedienteContext";
+
+const ESTADOS = [
+  { value: "", label: "---" },
+  { value: "borrador", label: "Borrador" },
+  { value: "en_revision", label: "En revisión" },
+  { value: "aprobado", label: "Aprobado" },
+  { value: "finalizado", label: "Finalizado" },
+];
 
 export default function GeneralTab() {
   const {
@@ -16,19 +25,24 @@ export default function GeneralTab() {
         <li className="list-group-item d-flex justify-content-between align-items-center">
           <span className="text-muted">Estado</span>
           <div className="d-flex align-items-center gap-2">
-            <select
-              className="form-select form-select-sm"
-              style={{ width: 180 }}
-              value={estado}
-              onChange={(e) => setEstado(e.target.value)}
-              disabled={guardandoEstado}
-            >
-              <option value="">Seleccionar</option>
-              <option value="borrador">Borrador</option>
-              <option value="en_revision">En revisión</option>
-              <option value="aprobado">Aprobado</option>
-              <option value="finalizado">Finalizado</option>
-            </select>
+            <Select
+              options={ESTADOS}
+              value={ESTADOS.find((o) => o.value === estado) ?? ESTADOS[0]}
+              onChange={(opt) => setEstado(opt?.value ?? "")}
+              isDisabled={guardandoEstado}
+              isSearchable={true}
+              menuPortalTarget={document.body}
+              styles={{
+                container: (base) => ({ ...base, width: 180 }),
+                control: (base) => ({
+                  ...base,
+                  minHeight: 31,
+                  fontSize: 14,
+                  borderRadius: 6,
+                }),
+                menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+              }}
+            />
             <button
               type="button"
               className="btn btn-sm btn-primary"

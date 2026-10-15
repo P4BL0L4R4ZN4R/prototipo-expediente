@@ -112,7 +112,11 @@
             "@/*": ["./resources/js/*"],
             "ziggy-js": ["./vendor/tightenco/ziggy"]
         },
-        "jsx": "react-jsx"
+        "jsx": "react-jsx",
+        "types": ["node_modules/@awesome.me/webawesome/dist/custom-elements-jsx.d.ts"]
+
     },
     "include": ["resources/js/**/*.ts", "resources/js/**/*.tsx"]
+
+
 }

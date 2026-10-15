@@ -17,7 +17,10 @@ class Expediente extends Model
         'meta'         => 'array',
         'propuesta_ia' => 'array',
         'entregable'   => 'array',
+        'fecha_propuesta' => 'date',
+        'fecha_entregable'   => 'date',
+        
     ];
 
-    protected $fillable = ['id', 'ia', 'data', 'meta', 'propuesta_ia', 'entregable'];
+    protected $fillable = ['id', 'ia', 'data', 'meta', 'propuesta_ia', 'entregable','fecha_propuesta', 'fecha_entregable' ];
 }

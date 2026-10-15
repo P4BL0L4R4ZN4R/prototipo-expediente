@@ -1,13 +1,15 @@
 import { useState } from "react";
 import FloatingWindow from "./FloatingWindow";
-import GeneralTab from "./GeneralTab";
-import PropuestaTab from "./PropuestaTab";
-import EntregableTab from "./EntregableTab";
+import GeneralTab from "./tabs/GeneralTab";
+import PropuestaTab from "./tabs/PropuestaTab";
+import EntregableTab from "./tabs/EntregableTab";
 import ExpedienteHeader from "./ExpedienteHeader";
-import { ExpedienteProvider } from "./ExpedienteContext";
+import { ExpedienteProvider } from "./context/ExpedienteContext";
 import { useExpedienteUI } from "../../hooks/useExpedienteUI";
-import { confirmar } from "@/utils/alert";
+import { confirmar, error as toastError } from "@/utils/alert";
 import "@/../css/expediente.css";
+import TooltipUi from "@/components/ui/TooltipUi";
+import "@/../css/tooltip.css";
 
 interface Props {
   idExpediente: string | null;
@@ -27,13 +29,54 @@ export default function ExpedienteWindow({
   const ui = useExpedienteUI(idExpediente, open);
   const [activeTab, setActiveTab] = useState<Tab>("general");
 
+  const [hayEditsPropuesta, setHayEditsPropuesta] = useState(false);
+  const [hayEditsEntregable, setHayEditsEntregable] = useState(false);
+
+  const [hayEditsFechas, setHayEditsFechas] = useState(false);
+
+  const marcarEditsFechas = () => setHayEditsFechas(true);
+  const limpiarEditsFechas = () => setHayEditsFechas(false);
+  
+
+  const handleSetFechaPropuesta = (d: Date | null) => {
+    ui.setFechaPropuesta(d);
+    marcarEditsFechas();
+  };
+  const handleSetFechaEntregable = (d: Date | null) => {
+    ui.setFechaEntregable(d);
+    marcarEditsFechas();
+  };
+
+  const hayCambiosSinGuardar =
+    ui.hayCambiosSinGuardar ||
+    hayEditsPropuesta ||
+    hayEditsEntregable ||
+    hayEditsFechas;
+
   const handleCerrar = async () => {
-    const result = await confirmar({
-      titulo: "¿Cerrar ventana?",
-      texto: "Si hay cambios sin guardar, se perderán.",
-      textoConfirmar: "Sí, cerrar",
-    });
-    if (result.isConfirmed) onClose();
+    if (hayCambiosSinGuardar) {
+      const result = await confirmar({
+        titulo: "¿Cerrar sin guardar?",
+        texto:
+          "Tienes cambios sin guardar. Las fechas sí se guardarán; los textos editados se perderán.",
+        textoConfirmar: "Sí, cerrar sin guardar",
+        textoCancelar: "Cancelar",
+      });
+      if (!result.isConfirmed) return;
+
+      if (hayEditsFechas) {
+        try {
+          await ui.persistirFechas();
+          limpiarEditsFechas();
+        } catch (err: any) {
+          toastError({
+            mensaje: err.message || "No se pudieron guardar las fechas",
+          });
+          return;
+        }
+      }
+    }
+    onClose();
   };
 
   return (
@@ -77,12 +120,37 @@ export default function ExpedienteWindow({
             genError: ui.genError,
             generatingPropuesta: ui.generatingPropuesta,
             progresoPropuesta: ui.progresoPropuesta,
-            generatingEntregable: ui.generatingEntregable,
-            progresoEntregable: ui.progresoEntregable,
-            generarPropuesta: ui.handleGenerarPropuesta,
+
+            // Entregable: estado granular por sección
+            generandoSecciones: ui.generandoSecciones,
+            erroresSecciones: ui.erroresSecciones,
+            generarSeccionEntregable: ui.generarSeccionEntregable,
+
+            generarPropuesta: ui.handleGenerarPropuesta, 
             generarEntregable: ui.handleGenerarEntregable,
             guardarPropuesta: ui.handleGuardarPropuesta,
             guardarEntregable: ui.handleGuardarEntregable,
+
+            numObjetivos: ui.numObjetivos,
+            setNumObjetivos: ui.setNumObjetivos,
+
+            // fechas (con wrappers que marcan edit)
+            fechaPropuesta: ui.fechaPropuesta,
+            setFechaPropuesta: handleSetFechaPropuesta,
+            fechaEntregable: ui.fechaEntregable,
+            setFechaEntregable: handleSetFechaEntregable,
+            persistirFechas: ui.persistirFechas,
+
+            // flags
+            hayCambiosSinGuardar,
+            registrarEditsPropuesta: setHayEditsPropuesta,
+            registrarEditsEntregable: setHayEditsEntregable,
+            hayEditsPropuesta,
+            hayEditsEntregable,
+
+            hayEditsFechas,
+            marcarEditsFechas,
+            limpiarEditsFechas,
           }}
         >
           <div className="border rounded-3 overflow-hidden">
@@ -96,14 +164,7 @@ export default function ExpedienteWindow({
 
             <div className="p-3 bg-white">
               {activeTab === "general" && <GeneralTab />}
-              {activeTab === "propuesta" && (
-                <PropuestaTab
-                  onGenerarEntregable={async () => {
-                    await ui.handleGenerarEntregable();
-                    setActiveTab("entregable");
-                  }}
-                />
-              )}
+              {activeTab === "propuesta" && <PropuestaTab />}
               {activeTab === "entregable" && <EntregableTab />}
             </div>
           </div>

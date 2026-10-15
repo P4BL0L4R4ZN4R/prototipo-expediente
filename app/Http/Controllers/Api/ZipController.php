@@ -19,7 +19,7 @@ class ZipController extends Controller
     {
         $inicio = microtime(true);
 
-        Log::info('ZIP · inicio', ['id' => $id]);
+        // Log::info('ZIP · inicio', ['id' => $id]);
 
         $exp = Expediente::find($id);
         if (!$exp) {
@@ -35,26 +35,27 @@ class ZipController extends Controller
                 'label' => 'Propuesta',
                 'fn'    => fn() => app(PropuestaWordController::class)->export($id),
             ],
-            '2.Entregable.docx' => [
-                'label' => 'Entregable',
-                'fn'    => fn() => app(EntregableWordController::class)->export($id),
-            ],
-            '3.Cotizacion-Inicial.docx' => [
+            '2.Cotizacion Inicial.docx' => [
                 'label' => 'Cotización Inicial',
                 'fn'    => fn() => app(CotizacionesWordController::class)->exportInicial($id),
             ],
-            '4.Cotizacion-Final.docx' => [
+            '3.Cotizacion Final.docx' => [
                 'label' => 'Cotización Final',
                 'fn'    => fn() => app(CotizacionesWordController::class)->exportFinal($id),
             ],
-            '5.Calendario.docx' => [
+            '4.Calendario de trabajo.docx' => [
                 'label' => 'Calendario',
                 'fn'    => fn() => app(CalendarioWordController::class)->export($id),
             ],
-            '6.Resumen.docx' => [
+            '5.Entregable.docx' => [
+                'label' => 'Entregable',
+                'fn'    => fn() => app(EntregableWordController::class)->export($id),
+            ],
+            '6.Resumen ejecutivo.docx' => [
                 'label' => 'Resumen',
                 'fn'    => fn() => app(ResumenWordController::class)->export($id),
             ],
+
             '7.Acuse.docx' => [
                 'label' => 'Acuse',
                 'fn'    => fn() => app(AcuseWordController::class)->export($id),
@@ -64,7 +65,7 @@ class ZipController extends Controller
         $zipPath = storage_path("app/tmp/expediente_{$id}.zip");
 
         if (!is_dir(dirname($zipPath))) {
-            Log::info('ZIP · creando carpeta tmp', ['path' => dirname($zipPath)]);
+            // Log::info('ZIP · creando carpeta tmp', ['path' => dirname($zipPath)]);
             mkdir(dirname($zipPath), 0777, true);
         }
 
@@ -74,9 +75,9 @@ class ZipController extends Controller
             return response()->json(['error' => 'No se pudo crear el ZIP'], 500);
         }
 
-        Log::info('ZIP · generando documentos', [
-            'total' => count($documentos),
-        ]);
+        // Log::info('ZIP · generando documentos', [
+        //     'total' => count($documentos),
+        // ]);
 
         $ok = 0;
         $fallidos = [];
@@ -84,9 +85,9 @@ class ZipController extends Controller
         foreach ($documentos as $nombre => $doc) {
             $t0 = microtime(true);
 
-            Log::info("ZIP · generando [{$doc['label']}]", [
-                'archivo' => $nombre,
-            ]);
+            // Log::info("ZIP · generando [{$doc['label']}]", [
+            //     'archivo' => $nombre,
+            // ]);
 
             try {
                 $bytes = $this->bytesDe($doc['fn']);
@@ -105,11 +106,11 @@ class ZipController extends Controller
                 $zip->addFromString($nombre, $bytes);
                 $ok++;
 
-                Log::info("ZIP · [{$doc['label']}] OK", [
-                    'archivo'  => $nombre,
-                    'bytes'    => strlen($bytes),
-                    'tiempo_s' => $t,
-                ]);
+                // Log::info("ZIP · [{$doc['label']}] OK", [
+                //     'archivo'  => $nombre,
+                //     'bytes'    => strlen($bytes),
+                //     'tiempo_s' => $t,
+                // ]);
 
             } catch (\Throwable $e) {
                 $fallidos[] = $nombre;
@@ -128,14 +129,14 @@ class ZipController extends Controller
 
         $total = round(microtime(true) - $inicio, 2);
 
-        Log::info('ZIP · completado', [
-            'id'        => $id,
-            'ok'        => $ok,
-            'fallidos'  => $fallidos,
-            'total_s'   => $total,
-            'zip_path'  => $zipPath,
-            'zip_bytes' => file_exists($zipPath) ? filesize($zipPath) : 0,
-        ]);
+        // Log::info('ZIP · completado', [
+        //     'id'        => $id,
+        //     'ok'        => $ok,
+        //     'fallidos'  => $fallidos,
+        //     'total_s'   => $total,
+        //     'zip_path'  => $zipPath,
+        //     'zip_bytes' => file_exists($zipPath) ? filesize($zipPath) : 0,
+        // ]);
 
         return response()->download($zipPath, "expediente_{$id}.zip")
             ->deleteFileAfterSend(true);
@@ -150,19 +151,19 @@ class ZipController extends Controller
         $response = $fn();
 
         // Log del tipo de respuesta para saber qué nos devolvió
-        Log::info('ZIP · tipo de respuesta', [
-            'clase' => is_object($response) ? get_class($response) : gettype($response),
-        ]);
+        // Log::info('ZIP · tipo de respuesta', [
+        //     'clase' => is_object($response) ? get_class($response) : gettype($response),
+        // ]);
 
         // Caso 1: BinaryFileResponse (response()->download(...))
         if ($response instanceof \Symfony\Component\HttpFoundation\BinaryFileResponse) {
             $path = $response->getFile()->getPathname();
 
-            Log::info('ZIP · BinaryFileResponse', [
-                'path'      => $path,
-                'existe'    => file_exists($path),
-                'size'      => file_exists($path) ? filesize($path) : 0,
-            ]);
+            // Log::info('ZIP · BinaryFileResponse', [
+            //     'path'      => $path,
+            //     'existe'    => file_exists($path),
+            //     'size'      => file_exists($path) ? filesize($path) : 0,
+            // ]);
 
             if (!file_exists($path)) {
                 return null;
@@ -175,7 +176,7 @@ class ZipController extends Controller
 
         // Caso 2: StreamedResponse (response()->streamDownload(...))
         if ($response instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
-            Log::info('ZIP · StreamedResponse');
+            // Log::info('ZIP · StreamedResponse');
             ob_start();
             $response->sendContent();
             $out = ob_get_clean();
@@ -184,7 +185,7 @@ class ZipController extends Controller
 
         // Caso 3: Response normal (texto/binario en content)
         if ($response instanceof \Illuminate\Http\Response) {
-            Log::info('ZIP · Response normal');
+            // Log::info('ZIP · Response normal');
             return $response->getContent();
         }
 

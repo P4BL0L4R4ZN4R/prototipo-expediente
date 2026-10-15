@@ -6,64 +6,17 @@ use Carbon\Carbon;
 
 class Calc
 {
-    public function calculate(array $concepts, array $invoices): array
+    public function calculate(array $invoices): array
     {
-        $totalByConcept = [];
-        $fechaLegalByConcept = [];
-
-        foreach ($concepts as $c) {
-            $orden = $c['orden'];
-
-         
-            $total = 0;
-            foreach ($invoices as $f) {
-                if ($f['concepto_orden'] === $orden) {
-                    $total += $f['total_factura'];
-                }
-            }
-            $totalByConcept[(string) $orden] = round($total, 2);
-
-        
-            $fechaLegalByConcept[(string) $orden] = $this->legalDateForConcept($orden, $invoices);
+        $programTotal = 0;
+        foreach ($invoices as $f) {
+            $programTotal += $f['total_factura'];
         }
-
-        $programTotal = round(array_sum($totalByConcept), 2);
 
         return [
-            'total_programa'           => $programTotal,
-            'total_por_concepto'       => $totalByConcept,
-
-            // Fecha legal por cada concepto (lo que pediste)
-            'fecha_legal_por_concepto' => $fechaLegalByConcept,
-
-            // Fecha legal global (compatibilidad con lo que ya existía)
-            'fecha_legal'              => $this->legalDateGlobal($invoices),
+            'total_programa' => round($programTotal, 2),
+            'fecha_legal'    => $this->legalDateGlobal($invoices),
         ];
-    }
-
-    private function legalDateForConcept(int|string $orden, array $invoices): ?string
-    {
-        $dates = [];
-
-        foreach ($invoices as $f) {
-            if ($f['concepto_orden'] !== $orden) {
-                continue;
-            }
-            if (empty($f['fecha'])) {
-                continue;
-            }
-            try {
-                $dates[] = Carbon::parse($f['fecha']);
-            } catch (\Throwable) {}
-        }
-
-        if (empty($dates)) {
-            return null;
-        }
-
-        $oldest = collect($dates)->sort()->first();
-
-        return $this->plusBusinessDays($oldest, 15)->format('Y-m-d');
     }
 
     private function legalDateGlobal(array $invoices): ?string

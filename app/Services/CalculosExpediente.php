@@ -24,6 +24,26 @@ class CalculosExpediente
         });
     }
 
+
+    public function fechaDocumento(?Carbon $fecha, string $ciudad = 'Mérida, Yucatán'): string
+    {
+        if (!$fecha) return '';
+
+        $meses = [
+            1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
+            5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
+            9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre',
+        ];
+
+        return sprintf(
+            'Ciudad de %s a %d de %s del %d',
+            $ciudad,
+            $fecha->day,
+            $meses[$fecha->month],
+            $fecha->year
+        );
+    }
+
     // =========================================================
     // FECHAS REALES
     // =========================================================
@@ -46,6 +66,129 @@ class CalculosExpediente
             ->map(fn($f) => Carbon::parse($f))
             ->sort()
             ->values();
+    }
+
+    // =========================================================
+    // FECHAS DE DOCUMENTOS (relativas a la primera factura)
+    // =========================================================
+
+    /**
+     * Fecha de la propuesta: 15 días hábiles antes de la primera factura.
+     */
+    public function fechaPropuesta(): ?Carbon
+    {
+        $base = $this->fechaRealInicio();
+        if (!$base) return null;
+
+        return $this->sumarDiasHabiles($base, -15);
+    }
+
+    /**
+     * Fecha de la cotización inicial: 2 días hábiles después de la propuesta.
+     */
+    public function fechaCotizacionInicial(): ?Carbon
+    {
+        $propuesta = $this->fechaPropuesta();
+        if (!$propuesta) return null;
+
+        return $this->sumarDiasHabiles($propuesta, 2);
+    }
+
+    /**
+     * Fecha de la cotización final: 2 días hábiles después de la inicial.
+     */
+    public function fechaCotizacionFinal(): ?Carbon
+    {
+        $inicial = $this->fechaCotizacionInicial();
+        if (!$inicial) return null;
+
+        return $this->sumarDiasHabiles($inicial, 2);
+    }
+
+    /**
+     * Fecha del calendario: 2 días hábiles después de la cotización final.
+     */
+    public function fechaCalendario(): ?Carbon
+    {
+        $final = $this->fechaCotizacionFinal();
+        if (!$final) return null;
+
+        return $this->sumarDiasHabiles($final, 2);
+    }
+
+    // =========================================================
+    // DÍAS HÁBILES Y FESTIVOS
+    // =========================================================
+
+    /**
+     * Suma N días hábiles (positivos o negativos) a una fecha.
+     * Salta domingos y festivos de México.
+     */
+    public function sumarDiasHabiles(Carbon $fecha, int $dias): Carbon
+    {
+        $cursor   = $fecha->copy();
+        $paso     = $dias >= 0 ? 1 : -1;
+        $contador = 0;
+        $objetivo = abs($dias);
+
+        while ($contador < $objetivo) {
+            $cursor->addDays($paso);
+
+            if ($cursor->dayOfWeek !== Carbon::SUNDAY && !$this->esFestivo($cursor)) {
+                $contador++;
+            }
+        }
+
+        return $cursor;
+    }
+
+    /**
+     * Verifica si una fecha es festivo en México.
+     */
+    public function esFestivo(Carbon $fecha): bool
+    {
+        $year = $fecha->year;
+
+        // Festivos fijos
+        $fijos = [
+            [1, 1],   // Año Nuevo
+            [5, 1],   // Día del Trabajo
+            [9, 16],  // Independencia
+            [12, 25], // Navidad
+        ];
+
+        foreach ($fijos as [$mes, $dia]) {
+            if ($fecha->month === $mes && $fecha->day === $dia) {
+                return true;
+            }
+        }
+
+        // Festivos móviles
+        $moviles = [
+            $this->primerLunes($year, 2),   // Constitución
+            $this->tercerLunes($year, 3),   // Benito Juárez
+            $this->tercerLunes($year, 11),  // Revolución
+        ];
+
+        foreach ($moviles as $festivo) {
+            if ($fecha->isSameDay($festivo)) return true;
+        }
+
+        return false;
+    }
+
+    private function primerLunes(int $year, int $month): Carbon
+    {
+        $d = Carbon::create($year, $month, 1);
+        while ($d->dayOfWeek !== Carbon::MONDAY) {
+            $d->addDay();
+        }
+        return $d;
+    }
+
+    private function tercerLunes(int $year, int $month): Carbon
+    {
+        return $this->primerLunes($year, $month)->addDays(14);
     }
 
     // =========================================================
@@ -111,7 +254,8 @@ class CalculosExpediente
         Carbon $ini,
         Carbon $fin,
         float $totalFacturado
-    ): array {
+    ): array 
+    {
         $mesesReales   = $this->calcularMesesAproximados($ini, $fin);
         $mesesPorMonto = max(1, (int) ceil($totalFacturado / self::MONTO_MAXIMO_MENSUAL));
         $mesesFinales  = max($mesesReales, $mesesPorMonto);

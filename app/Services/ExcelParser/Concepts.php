@@ -9,10 +9,7 @@ class Concepts
         $headers = array_map(fn($v) => trim((string) $v), $rows[$headerRow]);
 
         $colConcept = array_search('Concepto', $headers);
-        $colProcess = array_search('Proceso', $headers);
-        $colKey     = array_search('Clave', $headers);
-        $colDesc    = array_search('Descripción', $headers);
-        $colCost    = array_search('Costo P/MES', $headers);
+        // $colProcess = array_search('Proceso', $headers);
 
         $concepts = [];
         $order = 0;
@@ -25,26 +22,37 @@ class Concepts
                 continue;
             }
 
+            // Solo procesar si tiene paréntesis
+            $concepto = $this->extraerDeParentesis($raw);
+            if ($concepto === null) {
+                continue;
+            }
+
             $order++;
             $concepts[] = [
-                'orden'             => $order,
-                'concepto'          => $this->inParens($raw),
-                'concepto_completo' => $raw,
-                'proceso'           => trim((string) ($row[$colProcess] ?? '')),
-                'clave'             => trim((string) ($row[$colKey] ?? '')),
-                'descripcion'       => trim((string) ($row[$colDesc] ?? '')),
-                'costo_p_mes'       => $row[$colCost] ?? null,
+                'orden'    => $order,
+                'concepto' => $concepto,
+                // 'proceso'  => trim((string) ($row[$colProcess] ?? '')),
             ];
         }
 
         return $concepts;
     }
 
-    private function inParens(string $text): string
+    /**
+     * Extrae SOLO lo que está dentro del último paréntesis.
+     * Si no hay paréntesis, devuelve null.
+     *
+     * Ejemplo:
+     *   "ASESORÍA EN TÉCNICAS... (Metodologías para el diseño...)"
+     *   → "Metodologías para el diseño..."
+     */
+    private function extraerDeParentesis(string $texto): ?string
     {
-        if (preg_match_all('/\((.*?)\)/', $text, $matches)) {
-            return trim(end($matches[1]));
+        if (preg_match_all('/\((.*?)\)/', $texto, $matches)) {
+            $contenido = trim(end($matches[1]));
+            return $contenido !== '' ? $contenido : null;
         }
-        return trim($text);
+        return null;
     }
 }

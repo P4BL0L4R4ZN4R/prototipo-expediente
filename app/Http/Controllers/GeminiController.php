@@ -156,17 +156,27 @@ class GeminiController extends Controller
      */
     private function llamarOpenAi(string $prompt): array
     {
+
+
+
         $key   = config('services.openai.key');
         $model = config('services.openai.model');
 
         $inicio = microtime(true);
 
+        // Log::info('OpenAI · enviando', [
+        //     'modelo' => $model,
+        //     'prompt_length' => strlen($prompt),
+        //     'aprox_tokens' => (int) (strlen($prompt) / 4),
+        // ]);
+        
         try {
             $response = Http::withToken($key)
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                 ])
                 ->timeout(60)
+                ->retry(3, 1000) 
                 ->post(
                     'https://api.openai.com/v1/chat/completions',
                     [

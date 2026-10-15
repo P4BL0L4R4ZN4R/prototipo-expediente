@@ -6,6 +6,8 @@ export type ContextoGlobal = {
   fecha_autorizado: string;
 };
 
+
+
 export type DatosDuros = {
   fecha_inicio: string | null;
   fecha_termino: string | null;
@@ -87,4 +89,6 @@ export interface Expediente {
   meta: Record<string, any> | null;
   propuesta_ia: Record<string, any> | null;
   entregable: Record<string, any> | null;
+  fecha_propuesta?: string | null;
+  fecha_entregable?: string | null;
 }

@@ -29,11 +29,11 @@ class ResumenController extends Controller
             return response()->json(['error' => 'Expediente incompleto'], 404);
         }
 
-        Log::info('RESUMEN · datos recibidos', [
-            'id'   => $id,
-            'ia'   => $ia,
-            'data' => $data,
-        ]);
+        // Log::info('RESUMEN · datos recibidos', [
+        //     'id'   => $id,
+        //     'ia'   => $ia,
+        //     'data' => $data,
+        // ]);
 
         return response()->json([
             'id'       => $id,
@@ -59,7 +59,8 @@ class ResumenController extends Controller
                 fn ($c) => [
                     'orden'    => $c['orden']    ?? null,
                     'concepto' => $c['concepto'] ?? null,
-                    'proceso'  => $c['proceso']  ?? null,
+                 
+                    
                 ],
                 $data['conceptos'] ?? []
             ),

@@ -27,14 +27,13 @@ return [
     | Supported drivers: "local", "ftp", "sftp", "s3"
     |
     */
-
     'disks' => [
 
         'local' => [
             'driver' => 'local',
-            'root' => storage_path('app/private'),
-            'serve' => true,
-            'throw' => false,
+            'root'   => env('LOCAL_STORAGE_PATH', storage_path('app/private')),
+            'serve'  => true,
+            'throw'  => false,
         ],
 
         'public' => [
@@ -44,6 +43,14 @@ return [
             'visibility' => 'public',
             'throw' => false,
         ],
+
+        // 🆕 Disco para textos de expedientes
+        'expedientes' => [
+            'driver' => 'local',
+            'root'   => env('EXPEDIENTES_PATH', storage_path('app/expedientes')),
+            'throw'  => false,
+        ],
+
 
         's3' => [
             'driver' => 's3',
@@ -58,7 +65,6 @@ return [
         ],
 
     ],
-
     /*
     |--------------------------------------------------------------------------
     | Symbolic Links

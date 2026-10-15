@@ -29,19 +29,19 @@ class CotizacionController extends Controller
         $ia   = $exp->ia ?? [];
 
         // Mapa orden → proceso/nombre
-        $procesosPorOrden = collect($ia['conceptos'] ?? [])
+        $conceptosPorOrden = collect($ia['conceptos'] ?? [])
             ->keyBy('orden')
-            ->map(fn($c) => $c['proceso'] ?? $c['concepto'] ?? '')
+            ->map(fn($c) => $c['concepto'] ?? $c['concepto'] ?? '')
             ->all();
 
-        $filas = collect($data['conceptos'] ?? [])->flatMap(function ($c) use ($procesosPorOrden) {
+        $filas = collect($data['conceptos'] ?? [])->flatMap(function ($c) use ($conceptosPorOrden) {
             $orden   = $c['orden'] ?? null;
-            $proceso = $procesosPorOrden[$orden] ?? ($c['descripcion'] ?? '');
+            $concepto = $conceptosPorOrden[$orden] ?? ($c['descripcion'] ?? '');
 
-            return collect($c['facturas'] ?? [])->map(function ($f) use ($proceso) {
+            return collect($c['facturas'] ?? [])->map(function ($f) use ($concepto) {
                 return [
                     'id'       => $f['folio_fiscal'] ?? uniqid(),
-                    'concepto' => $proceso,
+                    'concepto' => $concepto,
                     'monto'    => (float) ($f['total_factura'] ?? 0),
                 ];
             });
@@ -158,16 +158,16 @@ class CotizacionController extends Controller
 
     private function agruparGrupos(array $data, array $ia = []): Collection
     {
-        $procesosPorOrden = collect($ia['conceptos'] ?? [])
+        $conceptosPorOrden = collect($ia['conceptos'] ?? [])
             ->keyBy('orden')
-            ->map(fn($c) => $c['proceso'] ?? $c['concepto'] ?? '')
+            ->map(fn($c) => $c['concepto'] ?? $c['concepto'] ?? '')
             ->all();
 
-        return collect($data['conceptos'] ?? [])->map(function ($c) use ($procesosPorOrden) {
+        return collect($data['conceptos'] ?? [])->map(function ($c) use ($conceptosPorOrden) {
             $orden = $c['orden'] ?? null;
 
             return [
-                'concepto' => $procesosPorOrden[$orden] ?? ($c['descripcion'] ?? ''),
+                'concepto' => $conceptosPorOrden[$orden] ?? ($c['descripcion'] ?? ''),
                 'facturas' => $c['facturas'] ?? [],
             ];
         })->filter(fn($g) => count($g['facturas']) > 0)->values();

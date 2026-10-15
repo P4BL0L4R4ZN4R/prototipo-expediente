@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\ExcelParser\Parser;
+use App\Services\ExpedienteTextoStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -13,19 +14,17 @@ class ExcelController extends Controller
 {
     public function __construct(
         private Parser $parser,
+        private ExpedienteTextoStorage $textoStorage,
     ) {}
-
 
     public function index()
     {
-        $t0 = microtime(true);
         return response()->json(
             Expediente::query()
                 ->orderByDesc('created_at')
                 ->get(['id'])
         );
     }
-
 
     public function ia(string $id)
     {
@@ -40,18 +39,11 @@ class ExcelController extends Controller
 
     public function data(string $id)
     {
-
         $expediente = Expediente::find($id);
-        $t0 = microtime(true);
 
         if (!$expediente) {
             return response()->json(['error' => 'No encontrado'], 404);
         }
-
-        Log::info('Tiempo total endpoint', [
-            'id' => $id,
-            'ms' => (microtime(true) - $t0) * 1000,
-        ]);
 
         return response()->json($expediente->data);
     }
@@ -62,6 +54,9 @@ class ExcelController extends Controller
             'excel' => 'required|file|mimes:xlsx,xls|max:10240',
         ]);
 
+
+
+
         try {
             $pathExcel = $request->file('excel')->store('excels');
 
@@ -71,7 +66,6 @@ class ExcelController extends Controller
 
             $id = 'exp_' . now()->format('Ymd_His');
 
-            // 🆕 Solo BD, sin disco
             Expediente::updateOrCreate(
                 ['id' => $id],
                 [
@@ -80,8 +74,9 @@ class ExcelController extends Controller
                 ]
             );
 
-            // Opcional: borrar el Excel temporal si ya no lo necesitas
+            // Opcional: borrar el Excel temporal
             // Storage::delete($pathExcel);
+
 
             return response()->json(['id' => $id], 201);
 
@@ -93,28 +88,27 @@ class ExcelController extends Controller
         }
     }
 
-
     public function show(string $id)
     {
         $expediente = Expediente::find($id);
-        $t0 = microtime(true);
 
         if (!$expediente) {
             return response()->json(['error' => 'No encontrado'], 404);
         }
 
-        Log::info('Tiempo total endpoint', [
-            'id' => $id,
-            'ms' => (microtime(true) - $t0) * 1000,
-        ]);
+        // Hidratar propuesta_ia y entregable: leer los .txt
+        $propuesta  = $this->textoStorage->obtenerPropuestaCompleta($id);
+        $entregable = $this->textoStorage->obtenerEntregableCompleto($id);
 
         return response()->json([
             'id'            => $expediente->id,
             'ia'            => $expediente->ia,
             'data'          => $expediente->data,
             'meta'          => $expediente->meta,
-            'propuesta_ia'  => $expediente->propuesta_ia,
-            'entregable'    => $expediente->entregable,
+            'propuesta_ia'  => $propuesta,
+            'entregable'    => $entregable,
+            'fecha_propuesta'  => $expediente->fecha_propuesta?->format('Y-m-d'),
+            'fecha_entregable' => $expediente->fecha_entregable?->format('Y-m-d'),
         ]);
     }
 
@@ -126,7 +120,13 @@ class ExcelController extends Controller
             return response()->json(['error' => 'No encontrado'], 404);
         }
 
-        $zipPath = storage_path("app/expedientes/{$id}.zip");
+        // Asegurar directorio
+        $dir = storage_path("app/expedientes");
+        if (!is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        }
+
+        $zipPath = "{$dir}/{$id}.zip";
         $zip = new \ZipArchive();
 
         if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
@@ -138,12 +138,25 @@ class ExcelController extends Controller
                 'data.json',
                 json_encode($expediente->data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
             );
+
+            // Agregar propuesta y entregable hidratados
+            $propuesta  = $this->textoStorage->obtenerPropuestaCompleta($id);
+            $entregable = $this->textoStorage->obtenerEntregableCompleto($id);
+
+            $zip->addFromString(
+                'propuesta_ia.json',
+                json_encode($propuesta, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            );
+            $zip->addFromString(
+                'entregable.json',
+                json_encode($entregable, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            );
+
             $zip->close();
         }
 
         return response()->download($zipPath)->deleteFileAfterSend(true);
     }
-
 
     public function destroy(string $id)
     {
@@ -153,116 +166,16 @@ class ExcelController extends Controller
             return response()->json(['error' => 'No encontrado'], 404);
         }
 
+        // Borrar carpeta de textos del filesystem
+        if (Storage::disk('expedientes')->exists($id)) {
+            Storage::disk('expedientes')->deleteDirectory($id);
+        }
+
+        // Borrar el registro
         $expediente->delete();
 
         return response()->json(['ok' => true]);
     }
-
-    // private function shape(array $data): array
-    // {
-    //     return [
-
-    //         // =========================================================
-    //         // JSON 1 - DATOS GENERALES
-    //         // =========================================================
-
-    //         'empresa_factura' => $data['empresa_factura'] ?? null,
-    //         'cliente'         => $data['cliente'] ?? null,
-    //         'servicio'        => $data['servicio'] ?? null,
-    //         'objetivo'        => $data['objetivo'] ?? null,
-
-    //         'conceptos' => array_map(function ($concepto) {
-    //             return [
-    //                 'orden'    => $concepto['orden'] ?? null,
-    //                 'concepto' => $concepto['concepto'] ?? null,
-    //                 'proceso'  => $concepto['proceso'] ?? null,
-
-    //                 // Disponible si posteriormente se necesita:
-    //                 // 'clave'       => $concepto['clave'] ?? null,
-    //                 // 'descripcion' => $concepto['descripcion'] ?? null,
-    //                 // 'costo_p_mes' => $concepto['costo_p_mes'] ?? null,
-    //                 // 'total'       => $concepto['total'] ?? null,
-
-    //                 // NO persistir por ahora:
-    //                 // 'facturas' => ...
-    //             ];
-    //         }, $data['conceptos'] ?? []),
-
-
-            
-
-    //         // =========================================================
-    //         // JSON 2 - DATOS ADMINISTRATIVOS / FINANCIEROS
-    //         // =========================================================
-
-    //         'fecha_inicio'  => $data['fecha_inicio'] ?? null,
-    //         'fecha_termino' => $data['fecha_termino'] ?? null,
-
-    //         // Disponible si posteriormente se necesita:
-    //         // 'costo_p_mes' => $data['costo_p_mes'] ?? null,
-
-
-    //         // =========================================================
-    //         // FACTURAS
-    //         // =========================================================
-    //         // Por ahora NO se almacenan.
-    //         // Se dejan documentadas aquí para poder activarlas después.
-    //         //
-    //         // 'facturas' => [
-    //         //     [
-    //         //         'concepto_orden' => ...,
-    //         //         'total_factura'  => ...,
-    //         //         'no_factura'     => ...,
-    //         //         'folio_fiscal'   => ...,
-    //         //         'fecha'          => ...,
-    //         //         'observaciones'  => ...,
-    //         //     ]
-    //         // ],
-
-
-    //         // =========================================================
-    //         // CÁLCULOS
-    //         // =========================================================
-
-    //         'calculos' => [
-    //             'total_programa' => $data['calculos']['total_programa'] ?? null,
-    //             'fecha_legal'    => $data['calculos']['fecha_legal'] ?? null,
-
-    //             // Disponible posteriormente:
-    //             // 'otro_calculo' => $data['calculos']['otro_calculo'] ?? null,
-    //         ],
-    //     ];
-    // }
-
-    //Proximo a eliminar
-    public function migrarExistentes()
-    {
-        $dirs = Storage::directories('expedientes');
-        $count = 0;
-
-        foreach ($dirs as $dir) {
-            $id = basename($dir);
-
-            $leer = fn($path) => Storage::exists($path)
-                ? json_decode(Storage::get($path), true)
-                : null;
-
-            $ia   = $leer("{$dir}/ia.json");
-            $data = $leer("{$dir}/data.json");
-
-            if (!$ia && !$data) continue;
-
-            Expediente::updateOrCreate(
-                ['id' => $id],
-                ['ia' => $ia, 'data' => $data]
-            );
-
-            $count++;
-        }
-
-        return response()->json(['migrados' => $count]);
-    }
-
 
     public function update(Request $request, string $id)
     {
@@ -271,30 +184,53 @@ class ExcelController extends Controller
             return response()->json(['error' => 'No encontrado'], 404);
         }
 
+        // ── META
         if ($request->has('meta')) {
-            $exp->meta = array_merge($exp->meta ?? [], $request->input('meta', []));
+            $meta = array_merge($exp->meta ?? [], $request->input('meta', []));
+            unset($meta['estado']);  // Campo muerto
+            $exp->meta = $meta;
         }
 
+        // ── PROPUESTA_IA
         if ($request->has('propuesta_ia')) {
-            $propuesta = $exp->propuesta_ia ?? [];
             foreach ($request->input('propuesta_ia', []) as $seccion => $val) {
-                $propuesta[$seccion] = array_merge($propuesta[$seccion] ?? [], $val);
+                $texto = $val['texto'] ?? null;
+                if ($texto !== null) {
+                    $this->textoStorage->guardarSeccion($id, 'propuesta', $seccion, $texto);
+                }
             }
-            $exp->propuesta_ia = $propuesta;
         }
 
+        // ── ENTREGABLE
         if ($request->has('entregable')) {
-            $entregable = $exp->entregable ?? [];
             foreach ($request->input('entregable', []) as $seccion => $val) {
-                $entregable[$seccion] = array_merge($entregable[$seccion] ?? [], $val);
+                $texto = $val['texto'] ?? null;
+                if ($texto !== null) {
+                    $this->textoStorage->guardarSeccion($id, 'entregable', $seccion, $texto);
+                }
             }
-            $exp->entregable = $entregable;
+        }
+
+        // ── FECHAS
+        if ($request->has('fecha_propuesta')) {
+            $exp->fecha_propuesta = $request->input('fecha_propuesta');
+        }
+        if ($request->has('fecha_entregable')) {
+            $exp->fecha_entregable = $request->input('fecha_entregable');
         }
 
         $exp->save();
 
-        return response()->json($exp);
+        // Devolver el expediente hidratado
+        return response()->json([
+            'id'            => $exp->id,
+            'ia'            => $exp->ia,
+            'data'          => $exp->data,
+            'meta'          => $exp->meta,
+            'propuesta_ia'  => $this->textoStorage->obtenerPropuestaCompleta($id),
+            'entregable'    => $this->textoStorage->obtenerEntregableCompleto($id),
+            'fecha_propuesta'  => $exp->fecha_propuesta?->format('Y-m-d'),
+            'fecha_entregable' => $exp->fecha_entregable?->format('Y-m-d'),
+        ]);
     }
-        
-
 }
