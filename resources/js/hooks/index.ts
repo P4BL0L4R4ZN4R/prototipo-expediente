@@ -1,15 +1,15 @@
 // =========================================================
 // Hooks existentes
 // =========================================================
-export * from "./use-appearance";
-export * from "./use-carta-conceptos";
-export * from "./use-initials";
-export * from "./use-mobile-navigation";
-export * from "./use-mobile";
+export * from "./default/use-appearance";
+export * from "./expediente/use-carta-conceptos";
+export * from "./default/use-initials";
+export * from "./default/use-mobile-navigation";
+export * from "./default/use-mobile";
 
 // =========================================================
 // Hooks de Expediente
 // =========================================================
-export * from "./use-expediente";
+export * from "./expediente/use-expediente";
 // export * from "./use-propuesta";
 // export * from "./use-entregable";

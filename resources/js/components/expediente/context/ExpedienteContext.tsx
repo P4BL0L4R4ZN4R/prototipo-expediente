@@ -1,58 +1,70 @@
 import { createContext, useContext } from "react";
 import type { Expediente } from "@/types/expediente";
 
+// =========================================================
+// TIPOS
+// =========================================================
+
 export type ExpedienteContextValue = {
+  // ─── Expediente ─────────────────────────────────────────
   expediente: Expediente;
 
-  // Meta / estado (sin cambios)
+  // ─── Datos generales ────────────────────────────────────
   estado: string;
   setEstado: (v: string) => void;
   guardarEstado: () => void;
   guardandoEstado: boolean;
+
+  direccion: string;
+  setDireccion: (v: string) => void;
+  guardarDireccion: () => void;
+  guardandoDireccion: boolean;
+
   tema: string;
   setTema: (v: string) => void;
+
   area: string;
   setArea: (v: string) => void;
 
-  // Fechas (sin cambios)
-  fechaPropuesta: Date | null;
-  setFechaPropuesta: (d: Date | null) => void;
-  fechaEntregable: Date | null;
-  setFechaEntregable: (d: Date | null) => void;
 
-  // Handles (MODIFICADO)
+  // ─── Generación de propuesta ────────────────────────────
   genError: string | null;
   generatingPropuesta: boolean;
   progresoPropuesta: string | null;
-  
-  // 👇 MODIFICADO: ya no es un solo booleano, es un mapa por sección
+  generarPropuesta: () => Promise<void>;
+
+  // ─── Generación de entregable ───────────────────────────
   generandoSecciones: Record<string, boolean>;
   erroresSecciones: Record<string, string | null>;
-  
-  // 👇 MODIFICADO: firma nueva
-  generarPropuesta: () => Promise<void>;     
   generarEntregable: () => Promise<void>;
   generarSeccionEntregable: (seccion: string) => Promise<void>;
 
+  // ─── Persistencia de secciones ──────────────────────────
   guardarPropuesta: (s: Record<string, string>) => Promise<void>;
   guardarEntregable: (s: Record<string, string>) => Promise<void>;
+
+  // ─── Estado de cambios sin guardar ──────────────────────
   hayCambiosSinGuardar: boolean;
-  registrarEditsPropuesta: (hay: boolean) => void;
-  registrarEditsEntregable: (hay: boolean) => void;
   hayEditsPropuesta: boolean;
   hayEditsEntregable: boolean;
 
-  hayEditsFechas: boolean;
-  marcarEditsFechas: () => void;
-  limpiarEditsFechas: () => void;
+  registrarEditsPropuesta: (hay: boolean) => void;
+  registrarEditsEntregable: (hay: boolean) => void;
 
+  // ─── Configuración de objetivos ─────────────────────────
   numObjetivos: number;
   setNumObjetivos: (v: number) => void;
-
-  persistirFechas: () => Promise<void>;
 };
 
+// =========================================================
+// CONTEXTO
+// =========================================================
+
 const ExpedienteContext = createContext<ExpedienteContextValue | null>(null);
+
+// =========================================================
+// HOOK
+// =========================================================
 
 export function useExpedienteContext() {
   const ctx = useContext(ExpedienteContext);
@@ -61,5 +73,9 @@ export function useExpedienteContext() {
   }
   return ctx;
 }
+
+// =========================================================
+// PROVIDER
+// =========================================================
 
 export const ExpedienteProvider = ExpedienteContext.Provider;

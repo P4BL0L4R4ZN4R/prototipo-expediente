@@ -2,82 +2,61 @@
 
 namespace App\Http\Controllers\Word;
 
-use PhpOffice\PhpWord\TemplateProcessor;
+use App\Services\Secciones\Cotizacion\Generador;
 use App\Http\Controllers\Api\WordController;
-use App\Http\Controllers\Api\CotizacionController;
-use App\Models\Expediente;
-use App\Services\ExpedienteTextoStorage;
+use App\Services\Storage\ExpedienteTextoStorage;
 use App\Services\Word\ExpedienteContext;
+use App\Services\Word\WordFieldDispatcher;
+use App\Services\Word\WordFieldRegistry;
+use App\Services\Word\WordFieldResolver;
 use App\Services\Word\WordTemplateService;
 use Illuminate\Support\Facades\Log;
+use PhpOffice\PhpWord\TemplateProcessor;
 
 class EntregableWordController extends WordController
 {
     public function __construct(
         private WordTemplateService $tpl,
-        private CotizacionController $cotizacion,
+        private Generador $cotizacion,
         private ExpedienteTextoStorage $textoStorage,
-    ) {}
+        WordFieldResolver $resolver,
+        WordFieldDispatcher $dispatcher,
+    ) {
+        parent::__construct($resolver, $dispatcher);
+    }
 
-    protected function plantilla(): string { return 'plantillas/5.ENTREGABLE.docx'; }
-    protected function nombreArchivo(string $id): string { return "entregable_{$id}"; }
+    protected function plantilla(): string
+    {
+        return 'plantillas/5.ENTREGABLE.docx';
+    }
+
+    protected function nombreArchivo(string $id): string
+    {
+        return "entregable_{$id}";
+    }
+
+    protected function campos(): array
+    {
+        return WordFieldRegistry::entregable();
+    }
 
     protected function construir(TemplateProcessor $template, array $data, array $ia): void
     {
         $ctx = new ExpedienteContext($this->expedienteId, $data, $ia);
 
-        $this->inyectarEncabezado($template, $ctx);
-        $this->inyectarIntroduccion($template, $ctx);
-        $this->inyectarProblematica($template, $ctx);
-        $this->inyectarDesarrolloConceptos($template, $ctx);
-        $this->inyectarObjetivos($template, $ctx);
-        $this->inyectarCierre($template, $ctx);
-        $this->inyectarTablaPagos($template, $data, $ia);
-        $this->inyectarRetrospectiva($template, $ctx);
-    }
+        // 1. Campos declarativos:
+        //    INTRODUCCION, PROBLEMATICA, DESARROLLO_CONCEPTOS, RETROSPECTIVA,
+        //    OBJETIVO_GENERAL, OBJETIVOS_ESPECIFICOS, FECHA, DIRECCION_CLIENTE
+        $this->inyectarCampos($template, $ctx);
 
-    // =========================================================
-    // ENCABEZADO
-    // =========================================================
-
-    private function inyectarEncabezado(TemplateProcessor $template, ExpedienteContext $ctx): void
-    {
+        // 2. Encabezado (custom)
         $this->tpl->setEncabezadoEmpresa($template, $ctx);
-        $template->setValue('FECHA', $ctx->calc->periodoServicio());
-    }
 
-    // =========================================================
-    // SECCIONES DE TEXTO
-    // =========================================================
+        // 3. Cierre (custom por fallback)
+        $this->inyectarCierre($template, $ctx);
 
-    private function inyectarIntroduccion(TemplateProcessor $template, ExpedienteContext $ctx): void
-    {
-        $seccion = $this->textoStorage->obtenerSeccion($ctx->id, 'entregable', 'introduccion');
-        $this->tpl->bloque($template, 'INTRODUCCION', $seccion['texto'] ?? '');
-    }
-
-    private function inyectarProblematica(TemplateProcessor $template, ExpedienteContext $ctx): void
-    {
-        $seccion = $this->textoStorage->obtenerSeccion($ctx->id, 'entregable', 'problematica');
-        $this->tpl->bloque($template, 'PROBLEMATICA', $seccion['texto'] ?? '');
-    }
-
-    private function inyectarDesarrolloConceptos(TemplateProcessor $template, ExpedienteContext $ctx): void
-    {
-        $seccion = $this->textoStorage->obtenerSeccion($ctx->id, 'entregable', 'desarrollo_conceptos');
-        $this->tpl->conNegritas($template, 'DESARROLLO_CONCEPTOS', $seccion['texto'] ?? '');
-    }
-
-    // =========================================================
-    // HEREDADAS DE LA PROPUESTA
-    // =========================================================
-
-    private function inyectarObjetivos(TemplateProcessor $template, ExpedienteContext $ctx): void
-    {
-        $propuesta = $this->textoStorage->obtenerPropuestaCompleta($ctx->id);
-
-        $this->tpl->bloque($template, 'OBJETIVO_GENERAL', $propuesta['objetivo_general']['texto'] ?? '');
-        $this->tpl->lista ($template, 'OBJETIVOS_ESPECIFICOS', $propuesta['objetivos_especificos']['texto'] ?? '');
+        // 4. Tabla de pagos (custom porque llama a CotizacionController)
+        $this->inyectarTablaPagos($template, $data, $ia);
     }
 
     // =========================================================
@@ -87,15 +66,17 @@ class EntregableWordController extends WordController
     private function inyectarCierre(TemplateProcessor $template, ExpedienteContext $ctx): void
     {
         $cierre = $this->construirCierre($ctx);
-        // $this->tpl->bloque($template, 'FINALIZACION_SERVICIO', '"' . $cierre . '"');
         $template->setValue('FINALIZACION_SERVICIO', $cierre);
     }
-
 
     private function construirCierre(ExpedienteContext $ctx): string
     {
         // El .txt ya tiene el cierre completo (lo armó Api\EntregableController)
-        $seccionCierre = $this->textoStorage->obtenerSeccion($ctx->id, 'entregable', 'finalizacion_servicio');
+        $seccionCierre = $this->textoStorage->obtenerSeccion(
+            $ctx->id,
+            'entregable',
+            'finalizacion_servicio'
+        );
         $cierre = trim($seccionCierre['texto'] ?? '');
 
         // Si no existe, armar un default
@@ -110,7 +91,6 @@ class EntregableWordController extends WordController
 
         return $cierre;
     }
-
 
     // =========================================================
     // TABLA DE PAGOS
@@ -139,17 +119,4 @@ class EntregableWordController extends WordController
             ]);
         }
     }
-
-
-    // =========================================================
-    // RETROSPECTIVA
-    // =========================================================
-
-    private function inyectarRetrospectiva(TemplateProcessor $template, ExpedienteContext $ctx): void
-    {
-        $seccion = $this->textoStorage->obtenerSeccion($ctx->id, 'entregable', 'retrospectiva');
-        $this->tpl->bloque($template, 'RETROSPECTIVA', $seccion['texto'] ?? '');
-    }
-
-    
 }

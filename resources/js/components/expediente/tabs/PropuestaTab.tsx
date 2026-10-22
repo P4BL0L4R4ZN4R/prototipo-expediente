@@ -37,9 +37,8 @@ export default function PropuestaTab() {
 
     numObjetivos,
     setNumObjetivos,
-    hayEditsFechas,
-    limpiarEditsFechas,
-    persistirFechas,
+
+    
   } = useExpedienteContext();
 
   const [edits, setEdits] = useState<Record<string, string>>({});
@@ -72,7 +71,7 @@ export default function PropuestaTab() {
     setEdits((prev) => ({ ...prev, [s]: t }));
 
   const handleGuardar = async () => {
-    if (!tieneEdits && !hayEditsFechas) {
+    if (!tieneEdits ) {
       toastError({ mensaje: "No hay cambios que guardar" });
       return;
     }
@@ -83,10 +82,7 @@ export default function PropuestaTab() {
         await guardarPropuesta(edits);
         setEdits({});
       }
-      if (hayEditsFechas) {
-        await persistirFechas();
-        limpiarEditsFechas();
-      }
+
       setGuardadoOk(true);
       setTimeout(() => setGuardadoOk(false), 2000);
     } catch (err: any) {
@@ -134,7 +130,7 @@ export default function PropuestaTab() {
       onCambio={handleCambio}
       onEjecutar={handleEjecutar}
       textoActivo={activa ? expediente.propuesta_ia?.[activa]?.texto ?? "" : ""}
-      hayEditsFechas={hayEditsFechas}
+    
     />
   );
 }

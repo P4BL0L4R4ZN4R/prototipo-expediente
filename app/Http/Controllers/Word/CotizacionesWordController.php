@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Word;
 
-use PhpOffice\PhpWord\TemplateProcessor;
-use App\Http\Controllers\Api\CotizacionController;
 use App\Http\Controllers\Api\WordController;
 use App\Services\Word\ExpedienteContext;
+use App\Services\Word\WordFieldDispatcher;
+use App\Services\Word\WordFieldRegistry;
+use App\Services\Word\WordFieldResolver;
 use App\Services\Word\WordTemplateService;
+use PhpOffice\PhpWord\TemplateProcessor;
+use App\Services\Secciones\Cotizacion\Generador;
 
 class CotizacionesWordController extends WordController
 {
@@ -14,16 +17,23 @@ class CotizacionesWordController extends WordController
 
     public function __construct(
         private WordTemplateService $tpl,
-        private CotizacionController $cotizacion,
-    ) {}
+        private Generador $cotizacion,
+        WordFieldResolver $resolver,
+        WordFieldDispatcher $dispatcher,
+    ) {
+        parent::__construct($resolver, $dispatcher);
+    }
 
-    public function exportInicial(string $id)   { return $this->exportar($id, 'inicial'); }
-    public function exportFinal(string $id)     { return $this->exportar($id, 'final'); }
+    public function exportInicial(string $id)    { return $this->exportar($id, 'inicial'); }
+    public function exportFinal(string $id)      { return $this->exportar($id, 'final'); }
     public function exportFinalFechas(string $id){ return $this->exportar($id, 'final_fechas'); }
 
     protected function exportar(string $id, string $tipo)
     {
-        $this->tipo = in_array($tipo, ['inicial','final','final_fechas'], true) ? $tipo : 'inicial';
+        $this->tipo = in_array($tipo, ['inicial', 'final', 'final_fechas'], true)
+            ? $tipo
+            : 'inicial';
+
         return $this->export($id);
     }
 
@@ -41,18 +51,25 @@ class CotizacionesWordController extends WordController
         return "cotizacion_{$this->tipo}_{$id}";
     }
 
+    /**
+     * Los campos dependen del tipo de cotización.
+     * Se delega al registry parametrizado.
+     */
+    protected function campos(): array
+    {
+        return WordFieldRegistry::cotizacion($this->tipo);
+    }
+
     protected function construir(TemplateProcessor $template, array $data, array $ia): void
     {
-        $ctx = new ExpedienteContext($this->expedienteId, $data, $ia);
-        $esFinal = in_array($this->tipo, ['final','final_fechas'], true);
+        $ctx     = new ExpedienteContext($this->expedienteId, $data, $ia);
+        $esFinal = in_array($this->tipo, ['final', 'final_fechas'], true);
 
+        // 1. Tabla de pagos (custom, va primero porque el placeholder
+        //    TABLA_COTIZACION está al inicio del documento)
         $info = $esFinal
             ? $this->cotizacion->tablaFinal($data, $ia)
             : $this->cotizacion->tablaInicial($data, $ia);
-
-        $fecha = $esFinal
-            ? $ctx->calc->fechaCotizacionFinal()
-            : $ctx->calc->fechaCotizacionInicial();
 
         $conFechas = ($this->tipo === 'final_fechas');
 
@@ -67,8 +84,14 @@ class CotizacionesWordController extends WordController
             true          // conTotal
         );
 
-        $this->tpl->setEncabezadoEmpresa($template, $ctx, $esFinal ? 'Cotización Final' : 'Cotización Inicial');
-        $template->setValue('FECHA',    $ctx->calc->fechaDocumento($fecha));
-        $template->setValue('SERVICIO', $ctx->servicio());
+        // 2. Campos declarativos: FECHA, SERVICIO, DIRECCION_CLIENTE
+        $this->inyectarCampos($template, $ctx);
+
+        // 3. Encabezado custom
+        $this->tpl->setEncabezadoEmpresa(
+            $template,
+            $ctx,
+            $esFinal ? 'Cotización Final' : 'Cotización Inicial'
+        );
     }
 }

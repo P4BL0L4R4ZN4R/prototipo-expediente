@@ -3,12 +3,21 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use PhpOffice\PhpWord\TemplateProcessor;
-use Illuminate\Support\Facades\Log;
 use App\Models\Expediente;
+use App\Services\Word\ExpedienteContext;
+use App\Services\Word\WordFieldDispatcher;
+use App\Services\Word\WordFieldResolver;
+use PhpOffice\PhpWord\TemplateProcessor;
 
 abstract class WordController extends Controller
 {
+    protected string $expedienteId;
+
+    public function __construct(
+        protected WordFieldResolver   $resolver,
+        protected WordFieldDispatcher $dispatcher,
+    ) {}
+
     /** Ruta de la plantilla dentro de storage/app */
     abstract protected function plantilla(): string;
 
@@ -21,6 +30,37 @@ abstract class WordController extends Controller
         array $data,
         array $ia
     ): void;
+
+    /**
+     * El hijo declara QUÉ campos usa.
+     * Por defecto, ninguno. Los hijos que quieran campos
+     * declarativos sobreescriben este método.
+     */
+    protected function campos(): array
+    {
+        return [];
+    }
+
+    /**
+     * Inyecta todos los campos declarados en campos().
+     * Resuelve cada uno con WordFieldResolver y lo inyecta
+     * con WordFieldDispatcher.
+     */
+    protected function inyectarCampos(
+        TemplateProcessor $template,
+        ExpedienteContext $ctx
+    ): void {
+        foreach ($this->campos() as $placeholder => $config) {
+            $texto = $this->resolver->resolver($ctx, $config);
+
+            $this->dispatcher->inyectar(
+                $template,
+                $placeholder,
+                $texto,
+                $config['metodo'] ?? 'bloque'
+            );
+        }
+    }
 
     public function export(string $id)
     {
@@ -39,14 +79,6 @@ abstract class WordController extends Controller
         if (empty($data) || empty($ia)) {
             return response()->json(['error' => 'Expediente incompleto'], 500);
         }
-
-        // Log::info('WORD · datos recibidos', [
-        //     'id'        => $id,
-        //     'clase'     => static::class,
-        //     'plantilla' => $this->plantilla(),
-        //     'ia'        => $ia,
-        //     'data'      => $data,
-        // ]);
 
         // 2. Resolver plantilla
         $templatePath = storage_path('app/' . $this->plantilla());

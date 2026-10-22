@@ -18,7 +18,7 @@ class FixedData
                 if (str_starts_with($v, 'fecha de inicio')) {
                     $data['fecha_inicio'] = $this->next($row, $j);
                 }
-                if (str_starts_with($v, 'fecha de termino')) {
+                if (str_starts_with($v, 'fecha de termino') || str_starts_with($v, 'fecha de término')) {
                     $data['fecha_termino'] = $this->next($row, $j);
                 }
             }
@@ -31,9 +31,26 @@ class FixedData
     {
         for ($k = $from + 1; $k < count($row); $k++) {
             $v = trim((string) $row[$k]);
-            if ($v !== '' && strtolower($v) !== 'nan') {
-                return $v;
+
+            // Ignorar vacíos
+            if ($v === '' || strtolower($v) === 'nan') {
+                continue;
             }
+
+            // Rechazar si es otra etiqueta (evita devolver "Fecha de Termino:" como fecha)
+            $lower = strtolower($v);
+            if (str_starts_with($lower, 'fecha de ') ||
+                str_starts_with($lower, 'fecha:') ||
+                str_ends_with($lower, ':')) {
+                return null;
+            }
+
+            // Rechazar si no parece fecha (permite YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY)
+            if (!preg_match('/\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4}/', $v)) {
+                return null;
+            }
+
+            return $v;
         }
         return null;
     }

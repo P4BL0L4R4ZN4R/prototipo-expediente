@@ -5,7 +5,7 @@ import PropuestaTab from "./tabs/PropuestaTab";
 import EntregableTab from "./tabs/EntregableTab";
 import ExpedienteHeader from "./ExpedienteHeader";
 import { ExpedienteProvider } from "./context/ExpedienteContext";
-import { useExpedienteUI } from "../../hooks/useExpedienteUI";
+import { useExpedienteUI } from "../../hooks/expediente/useExpedienteUI";
 import { confirmar, error as toastError } from "@/utils/alert";
 import "@/../css/expediente.css";
 import TooltipUi from "@/components/ui/TooltipUi";
@@ -32,49 +32,28 @@ export default function ExpedienteWindow({
   const [hayEditsPropuesta, setHayEditsPropuesta] = useState(false);
   const [hayEditsEntregable, setHayEditsEntregable] = useState(false);
 
-  const [hayEditsFechas, setHayEditsFechas] = useState(false);
-
-  const marcarEditsFechas = () => setHayEditsFechas(true);
-  const limpiarEditsFechas = () => setHayEditsFechas(false);
   
 
-  const handleSetFechaPropuesta = (d: Date | null) => {
-    ui.setFechaPropuesta(d);
-    marcarEditsFechas();
-  };
-  const handleSetFechaEntregable = (d: Date | null) => {
-    ui.setFechaEntregable(d);
-    marcarEditsFechas();
-  };
+
 
   const hayCambiosSinGuardar =
     ui.hayCambiosSinGuardar ||
     hayEditsPropuesta ||
-    hayEditsEntregable ||
-    hayEditsFechas;
+    hayEditsEntregable ;
+
 
   const handleCerrar = async () => {
     if (hayCambiosSinGuardar) {
       const result = await confirmar({
         titulo: "¿Cerrar sin guardar?",
         texto:
-          "Tienes cambios sin guardar. Las fechas sí se guardarán; los textos editados se perderán.",
+          "Tienes cambios sin guardar, los textos editados se perderán.",
         textoConfirmar: "Sí, cerrar sin guardar",
         textoCancelar: "Cancelar",
       });
       if (!result.isConfirmed) return;
 
-      if (hayEditsFechas) {
-        try {
-          await ui.persistirFechas();
-          limpiarEditsFechas();
-        } catch (err: any) {
-          toastError({
-            mensaje: err.message || "No se pudieron guardar las fechas",
-          });
-          return;
-        }
-      }
+    
     }
     onClose();
   };
@@ -106,53 +85,59 @@ export default function ExpedienteWindow({
       )}
 
       {!ui.loading && !ui.error && ui.expediente && (
-        <ExpedienteProvider
-          value={{
-            expediente: ui.expediente,
-            estado: ui.estado,
-            setEstado: ui.setEstado,
-            guardarEstado: ui.guardarEstado,
-            guardandoEstado: ui.guardandoEstado,
-            tema: ui.tema,
-            setTema: ui.setTema,
-            area: ui.area,
-            setArea: ui.setArea,
-            genError: ui.genError,
-            generatingPropuesta: ui.generatingPropuesta,
-            progresoPropuesta: ui.progresoPropuesta,
 
-            // Entregable: estado granular por sección
-            generandoSecciones: ui.generandoSecciones,
-            erroresSecciones: ui.erroresSecciones,
-            generarSeccionEntregable: ui.generarSeccionEntregable,
+      <ExpedienteProvider
+        value={{
+          // ─── Expediente ─────────────────────────────────────
+          expediente: ui.expediente,
 
-            generarPropuesta: ui.handleGenerarPropuesta, 
-            generarEntregable: ui.handleGenerarEntregable,
-            guardarPropuesta: ui.handleGuardarPropuesta,
-            guardarEntregable: ui.handleGuardarEntregable,
+          // ─── Datos generales ────────────────────────────────
+          estado: ui.estado,
+          setEstado: ui.setEstado,
+          guardarEstado: ui.guardarEstado,
+          guardandoEstado: ui.guardandoEstado,
 
-            numObjetivos: ui.numObjetivos,
-            setNumObjetivos: ui.setNumObjetivos,
+          direccion: ui.direccion,
+          setDireccion: ui.setDireccion,
+          guardarDireccion: ui.guardarDireccion,
+          guardandoDireccion: ui.guardandoDireccion,
 
-            // fechas (con wrappers que marcan edit)
-            fechaPropuesta: ui.fechaPropuesta,
-            setFechaPropuesta: handleSetFechaPropuesta,
-            fechaEntregable: ui.fechaEntregable,
-            setFechaEntregable: handleSetFechaEntregable,
-            persistirFechas: ui.persistirFechas,
+          tema: ui.tema,
+          setTema: ui.setTema,
+          area: ui.area,
+          setArea: ui.setArea,
 
-            // flags
-            hayCambiosSinGuardar,
-            registrarEditsPropuesta: setHayEditsPropuesta,
-            registrarEditsEntregable: setHayEditsEntregable,
-            hayEditsPropuesta,
-            hayEditsEntregable,
+          // ─── Generación propuesta ───────────────────────────
+          genError: ui.genError,
+          generatingPropuesta: ui.generatingPropuesta,
+          progresoPropuesta: ui.progresoPropuesta,
+          generarPropuesta: ui.handleGenerarPropuesta,
 
-            hayEditsFechas,
-            marcarEditsFechas,
-            limpiarEditsFechas,
-          }}
-        >
+
+
+          // ─── Generación entregable ──────────────────────────
+          generandoSecciones: ui.generandoSecciones,
+          erroresSecciones: ui.erroresSecciones,
+          generarEntregable: ui.handleGenerarEntregable,
+          generarSeccionEntregable: ui.generarSeccionEntregable,
+
+          // ─── Persistencia secciones ─────────────────────────
+
+          guardarPropuesta: ui.handleGuardarPropuesta,
+          guardarEntregable: ui.handleGuardarEntregable,
+
+          // ─── Flags de cambios ───────────────────────────────
+          hayCambiosSinGuardar,
+          hayEditsPropuesta,
+          hayEditsEntregable,
+          registrarEditsPropuesta: setHayEditsPropuesta,
+          registrarEditsEntregable: setHayEditsEntregable,
+
+          // ─── Configuración ──────────────────────────────────
+          numObjetivos: ui.numObjetivos,
+          setNumObjetivos: ui.setNumObjetivos,
+        }}
+      >
           <div className="border rounded-3 overflow-hidden">
             <ExpedienteHeader
               activeTab={activeTab}

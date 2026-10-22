@@ -8,7 +8,7 @@ class Expediente extends Model
 {
     protected $table      = 'expedientes';
     protected $primaryKey = 'id';
-    public    $incrementing = false;
+    public    $incrementing = true;
     protected $keyType    = 'string';
 
     protected $casts = [
@@ -17,10 +17,21 @@ class Expediente extends Model
         'meta'         => 'array',
         'propuesta_ia' => 'array',
         'entregable'   => 'array',
-        'fecha_propuesta' => 'date',
-        'fecha_entregable'   => 'date',
-        
+        'fecha_propuesta'  => 'date',
+        'fecha_entregable' => 'date',
+        // 'estado_expediente' => 'string',
     ];
 
-    protected $fillable = ['id', 'ia', 'data', 'meta', 'propuesta_ia', 'entregable','fecha_propuesta', 'fecha_entregable' ];
+    protected $fillable = [
+        'id',
+        'ia',
+        'data',
+        'meta',
+        'propuesta_ia',
+        'entregable',
+        'fecha_propuesta',
+        'fecha_entregable',
+        'estado_expediente',
+        'direccion',
+    ];
 }

@@ -28,7 +28,7 @@ interface Props {
   textoActivo: string;
   numObjetivos: number;
   onNumObjetivosChange: (v: number) => void;
-  hayEditsFechas: boolean;
+
 }
 
 export default function PropuestaTabView({
@@ -52,14 +52,13 @@ export default function PropuestaTabView({
   onCambio,
   onEjecutar,
   textoActivo,
-  hayEditsFechas,
+
   numObjetivos,
   onNumObjetivosChange,
 }: Props) {
-  const { fechaPropuesta, setFechaPropuesta } = useExpedienteContext();
+  
 
-  const hayAlgoQueGuardar = tieneEdits || hayEditsFechas;
-
+  const hayAlgoQueGuardar = tieneEdits ;
   return (
     <>
       <ConfigIA

@@ -14,44 +14,72 @@ export default function GeneralTab() {
     expediente,
     estado,
     setEstado,
-    guardarEstado,
     guardandoEstado,
+    direccion,
+    setDireccion,
+    guardandoDireccion,
+    guardarEstado,
+    guardarDireccion,
+    hayCambiosSinGuardar,
   } = useExpedienteContext();
+
+  const guardando = guardandoEstado || guardandoDireccion;
+
+  const guardarTodo = async () => {
+    await Promise.all([
+      guardarEstado(),
+      guardarDireccion(),
+    ]);
+  };
 
   return (
     <>
-      <h6 className="text-muted mb-3">Datos generales</h6>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h6 className="text-muted mb-0">Datos generales</h6>
+        <button
+          type="button"
+          className="btn btn-sm btn-primary"
+          onClick={guardarTodo}
+          disabled={!hayCambiosSinGuardar || guardando}
+        >
+          {guardando ? "Guardando..." : "Guardar"}
+        </button>
+      </div>
+
       <ul className="list-group mb-0">
         <li className="list-group-item d-flex justify-content-between align-items-center">
-          <span className="text-muted">Estado</span>
-          <div className="d-flex align-items-center gap-2">
-            <Select
-              options={ESTADOS}
-              value={ESTADOS.find((o) => o.value === estado) ?? ESTADOS[0]}
-              onChange={(opt) => setEstado(opt?.value ?? "")}
-              isDisabled={guardandoEstado}
-              isSearchable={true}
-              menuPortalTarget={document.body}
-              styles={{
-                container: (base) => ({ ...base, width: 180 }),
-                control: (base) => ({
-                  ...base,
-                  minHeight: 31,
-                  fontSize: 14,
-                  borderRadius: 6,
-                }),
-                menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-              }}
-            />
-            <button
-              type="button"
-              className="btn btn-sm btn-primary"
-              onClick={guardarEstado}
-              disabled={guardandoEstado}
-            >
-              {guardandoEstado ? "Guardando..." : "Guardar"}
-            </button>
-          </div>
+          <span className="text-muted flex-shrink-0 me-3">Estado</span>
+          <Select
+            options={ESTADOS}
+            value={ESTADOS.find((o) => o.value === estado) ?? ESTADOS[0]}
+            onChange={(opt) => setEstado(opt?.value ?? "")}
+            isDisabled={guardando}
+            isSearchable={true}
+            menuPortalTarget={document.body}
+            styles={{
+              container: (base) => ({ ...base, width: 220 }),
+              control: (base) => ({
+                ...base,
+                minHeight: 31,
+                fontSize: 14,
+                borderRadius: 6,
+              }),
+              menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+            }}
+          />
+        </li>
+
+        <li className="list-group-item d-flex justify-content-between align-items-start">
+          <span className="text-muted flex-shrink-0 me-3">Dirección</span>
+          <textarea
+            className="form-control form-control-sm flex-grow-1"
+            value={direccion}
+            onChange={(e) => setDireccion(e.target.value)}
+            placeholder="Calle, número, colonia, CP, ciudad, estado"
+            disabled={guardando}
+            rows={2}
+            style={{ fontSize: 14, resize: "vertical" }}
+          />
         </li>
 
         <li className="list-group-item d-flex justify-content-between">

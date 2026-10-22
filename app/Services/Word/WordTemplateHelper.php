@@ -2,6 +2,7 @@
 
 namespace App\Services\Word;
 
+use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpWord\Element\TextRun;
 use PhpOffice\PhpWord\TemplateProcessor;
 
@@ -9,6 +10,8 @@ class WordTemplateHelper
 {
     public function bloque(TemplateProcessor $t, string $var, string $texto): void
     {
+        $this->verificar($t, $var);
+
         $texto = $this->limpiar($texto);
         if ($texto === '') { $t->setValue($var, ''); return; }
 
@@ -25,6 +28,8 @@ class WordTemplateHelper
 
     public function lista(TemplateProcessor $t, string $var, string $texto): void
     {
+        $this->verificar($t, $var);
+
         $texto = $this->limpiar($texto);
         if ($texto === '') { $t->setValue($var, ''); return; }
 
@@ -35,7 +40,6 @@ class WordTemplateHelper
 
         $xml = '';
         foreach ($lineas as $linea) {
-            // Quitar numeración existente ("1. ", "2. ") porque Word la pone sola
             $lineaLimpia = preg_replace('/^\d+\.\s*/', '', $linea);
 
             $xml .= '<w:p>'
@@ -52,8 +56,11 @@ class WordTemplateHelper
 
         $t->setValue($var, $xml);
     }
+
     public function conNegritas(TemplateProcessor $t, string $var, string $texto): void
     {
+        $this->verificar($t, $var);
+
         $texto = $this->limpiar($texto);
         if ($texto === '') { $t->setValue($var, ''); return; }
 
@@ -98,5 +105,27 @@ class WordTemplateHelper
     public function esc(string $texto): string
     {
         return htmlspecialchars($texto, ENT_QUOTES | ENT_XML1, 'UTF-8');
+    }
+
+    /**
+     * Verifica que el placeholder exista en la plantilla.
+     * Loguea warning si no, para detectar templates rotos antes de que salgan silenciosamente.
+     */
+    private function verificar(TemplateProcessor $t, string $var): void
+    {
+        try {
+            $variables = $t->getVariables();
+            if (!in_array($var, $variables, true)) {
+                Log::warning('WordTemplateHelper: placeholder no encontrado en plantilla', [
+                    'placeholder' => $var,
+                    'disponibles' => $variables,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('WordTemplateHelper: no se pudo leer getVariables()', [
+                'placeholder' => $var,
+                'error'       => $e->getMessage(),
+            ]);
+        }
     }
 }

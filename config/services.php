@@ -35,13 +35,12 @@ return [
         ],
     ],
 
-    'gemini' => [
-        'key'   => env('GEMINI_API_KEY'),
-        'model' => env('GEMINI_MODEL'),
-    ],
+
 
     'openai' => [
     'key'   => env('OPENAI_API_KEY'),
     'model' => env('OPENAI_MODEL'),
     ],
+
+
 ];

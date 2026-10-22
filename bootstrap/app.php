@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\TenantAuth;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,6 +18,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+        ]);
+
+        // NO pongas SetTenantDatabase en prepend.
+        // TenantAuth hace todo el trabajo.
+
+        $middleware->alias([
+            'tenant.auth' => TenantAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

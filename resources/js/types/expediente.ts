@@ -89,6 +89,6 @@ export interface Expediente {
   meta: Record<string, any> | null;
   propuesta_ia: Record<string, any> | null;
   entregable: Record<string, any> | null;
-  fecha_propuesta?: string | null;
-  fecha_entregable?: string | null;
+  estado_expediente: string; 
+  direccion: string | null;  
 }

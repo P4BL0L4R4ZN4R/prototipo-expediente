@@ -1,118 +1,86 @@
+import api from "@/api/client";
 import type { Expediente } from "@/types/expediente";
 
-const BASE = "/api/prototipo/excel";
-
-// =========================================================
-// UTILIDADES
-// =========================================================
-
 /**
- * Lee el token CSRF desde el meta tag o desde la cookie XSRF-TOKEN.
+ * Devuelve el prefijo de la URL con la plaza actual.
+ * Se calcula en cada llamada para que refleje cambios en localStorage.
  */
-function getCsrf(): string {
-  const meta = document.querySelector(
-    'meta[name="csrf-token"]'
-  ) as HTMLMetaElement | null;
-
-  if (meta?.content) return meta.content;
-
-  const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : "";
-}
-
-/**
- * Wrapper de fetch que centraliza:
- * - CSRF
- * - headers
- * - credentials
- * - manejo de errores
- */
-async function fetchJson<T = any>(
-  url: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const res = await fetch(url, {
-    ...options,
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      "X-CSRF-TOKEN": getCsrf(),
-      ...(options.headers ?? {}),
-    },
-  });
-
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(
-      error.detalle || error.error || `HTTP ${res.status}`
-    );
-  }
-
-  return res.json();
+function base(): string {
+  const plaza = localStorage.getItem("plaza") ?? "test00";
+  return `/${plaza}/prototipo/excel`;
 }
 
 // =========================================================
 // EXPEDIENTES — CRUD básico
 // =========================================================
 
-/**
- * Sube un Excel y devuelve el expediente parseado.
- */
 export async function subirExcel(
   file: File
 ): Promise<{ id: string; expediente: Expediente }> {
   const form = new FormData();
   form.append("excel", file);
 
-  return fetchJson(`${BASE}/upload`, {
-    method: "POST",
-    body: form,
-  });
+  const { data } = await api.post(`${base()}/upload`, form);
+  return data;
 }
 
-/**
- * Lista todos los expedientes procesados.
- */
 export async function listarExpedientes(): Promise<
   { id: string; path?: string }[]
 > {
-  return fetchJson(BASE);
+  const { data } = await api.get(base());
+  return data;
 }
 
-/**
- * Obtiene un expediente completo por id.
- */
-export async function obtenerExpediente(
-  id: string
-): Promise<Expediente> {
-  return fetchJson(`${BASE}/${id}`);
+export async function obtenerExpediente(id: string): Promise<Expediente> {
+  const { data } = await api.get(`${base()}/${id}`);
+  return data;
 }
 
-/**
- * Elimina un expediente.
- */
 export async function eliminarExpediente(
   id: string
 ): Promise<{ ok: boolean }> {
-  return fetchJson(`${BASE}/${id}`, { method: "DELETE" });
+  const { data } = await api.delete(`${base()}/${id}`);
+  return data;
 }
 
-/**
- * Actualiza meta, propuesta_ia o entregable de un expediente.
- */
 export async function actualizarExpediente(
   id: string,
   payload: {
     meta?: Record<string, any>;
     propuesta_ia?: Record<string, any>;
     entregable?: Record<string, any>;
+    estado_expediente?: string;
+    direccion?: string | null;
   }
 ): Promise<Expediente> {
-  return fetchJson(`${BASE}/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+  const { data } = await api.patch(`${base()}/${id}`, payload);
+  return data;
+}
+
+export async function actualizarEstado(
+  id: string,
+  estado: string
+): Promise<Expediente> {
+  const { data } = await api.patch(`${base()}/${id}`, {
+    estado_expediente: estado,
   });
+  return data;
+}
+
+export async function actualizarDireccion(
+  id: string,
+  direccion: string | null
+): Promise<Expediente> {
+  const { data } = await api.patch(`${base()}/${id}`, { direccion });
+  return data;
+}
+
+export async function actualizarMeta(
+  id: string,
+  meta: Record<string, any>
+): Promise<{ ok: boolean }> {
+  const { data } = await api.patch(`${base()}/${id}`, { meta });
+  return data;
 }
 
 // =========================================================
@@ -132,10 +100,8 @@ export async function generarPropuestaSeccion(
   id: string,
   seccion: string
 ): Promise<any> {
-  return fetchJson(`${BASE}/propuesta/${id}/${seccion}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
+  const { data } = await api.post(`${base()}/propuesta/${id}/${seccion}`);
+  return data;
 }
 
 // =========================================================
@@ -148,15 +114,12 @@ export const SECCIONES_ENTREGABLE = [
   { key: "desarrollo-conceptos", label: "Desarrollo conceptos" },
 ] as const;
 
-
 export async function generarEntregableSeccion(
   id: string,
   seccion: string
 ): Promise<any> {
-  return fetchJson(`${BASE}/entregable/${id}/${seccion}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
+  const { data } = await api.post(`${base()}/entregable/${id}/${seccion}`);
+  return data;
 }
 
 // =========================================================
@@ -173,41 +136,61 @@ export const DOCUMENTOS_WORD: DocumentoWord[] = [
   {
     key: "cotizacion-inicial",
     label: "Cotización inicial",
-    url: (id) => `${BASE}/word/cotizacion/inicial/${id}`,
+    url: (id) => `${base()}/word/cotizacion/inicial/${id}`,
   },
   {
     key: "cotizacion-final",
     label: "Cotización final",
-    url: (id) => `${BASE}/word/cotizacion/final/${id}`,
+    url: (id) => `${base()}/word/cotizacion/final/${id}`,
   },
   {
     key: "calendario",
     label: "Calendario",
-    url: (id) => `${BASE}/word/calendario/${id}`,
+    url: (id) => `${base()}/word/calendario/${id}`,
   },
   {
     key: "resumen",
     label: "Resumen",
-    url: (id) => `${BASE}/word/resumen/${id}`,
+    url: (id) => `${base()}/word/resumen/${id}`,
   },
   {
     key: "acuse",
     label: "Acuse",
-    url: (id) => `${BASE}/word/acuse/${id}`,
+    url: (id) => `${base()}/word/acuse/${id}`,
   },
   {
     key: "propuesta",
     label: "Propuesta",
-    url: (id) => `${BASE}/propuesta/${id}/word`,
+    url: (id) => `${base()}/propuesta/${id}/word`,
   },
   {
     key: "entregable",
     label: "Entregable",
-    url: (id) => `${BASE}/entregable/${id}/word`,
+    url: (id) => `${base()}/entregable/${id}/word`,
   },
 ];
 
+// =========================================================
+// DESCARGA DE DOCUMENTOS (Word / ZIP)
+// =========================================================
 
+/**
+ * Descarga un documento (Word, ZIP) usando axios con responseType blob.
+ * El token viaja en el interceptor de client.ts.
+ */
+export async function descargarDocumento(url: string, filename?: string) {
+  const { data: blob } = await api.get(url, { responseType: "blob" });
+
+  const objectUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = filename ?? "";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(objectUrl);
+}
 
 /**
  * Descarga los 7 documentos con delay entre cada uno
@@ -216,11 +199,7 @@ export const DOCUMENTOS_WORD: DocumentoWord[] = [
 export async function descargarTodos(
   id: string,
   delayMs = 500,
-  onProgreso?: (
-    indice: number,
-    total: number,
-    doc: DocumentoWord
-  ) => void
+  onProgreso?: (indice: number, total: number, doc: DocumentoWord) => void
 ) {
   const total = DOCUMENTOS_WORD.length;
 
@@ -229,7 +208,7 @@ export async function descargarTodos(
 
     onProgreso?.(i + 1, total, doc);
 
-    descargarDocumento(doc.url(id));
+    await descargarDocumento(doc.url(id));
 
     if (i < total - 1) {
       await new Promise((r) => setTimeout(r, delayMs));
@@ -238,38 +217,49 @@ export async function descargarTodos(
 }
 
 // =========================================================
-// EXPORTACIÓN ZIP
+// ZIP ASÍNCRONO (nuevo flujo: solicitar → polling → descargar)
 // =========================================================
 
 /**
- * Descarga todos los documentos del expediente en un solo ZIP.
+ * LEGACY: descarga el ZIP en un solo request (flujo antiguo).
+ * Se mantiene por compatibilidad, pero el flujo nuevo usa
+ * solicitarZip + estadoZip + descargarZipPorJob.
  */
-export function descargarZip(id: string) {
-  const url = `${BASE}/${id}/zip`;
-  descargarDocumento(url);
+export async function descargarZip(id: string) {
+  await descargarDocumento(`${base()}/${id}/zip`, `expediente-${id}.zip`);
 }
 
 /**
- * Dispara la descarga de un archivo usando un <a> temporal.
- * El navegador maneja el Content-Disposition del backend.
+ * 1) Dispara la generación del ZIP.
+ *    Con QUEUE_CONNECTION=sync el status ya vuelve 'done'.
+ *    Con cola, vuelve 'pending' o 'processing'.
  */
-export function descargarDocumento(url: string) {
-  const a = document.createElement("a");
-  a.href = url;
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+export async function solicitarZip(
+  id: string
+): Promise<{ job_id: string; status: "pending" | "processing" | "done" | "error" }> {
+  const { data } = await api.post(`${base()}/zip/${id}`);
+  return data;
 }
 
+/**
+ * 2) Consulta el estado del job.
+ */
+export async function estadoZip(jobId: string): Promise<{
+  status: "pending" | "processing" | "done" | "error";
+  ok?: number;
+  fallidos?: string[];
+  error?: string;
+}> {
+  const { data } = await api.get(`${base()}/zip/${jobId}/status`);
+  return data;
+}
 
-export async function actualizarMeta(
-  id: string,
-  meta: Record<string, any>
-): Promise<{ ok: boolean }> {
-  return fetchJson(`${BASE}/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ meta }),
-    headers: { "Content-Type": "application/json" },
-  });
+/**
+ * 3) Descarga el ZIP ya generado, reutilizando el patrón de descargarDocumento.
+ */
+export async function descargarZipPorJob(
+  jobId: string,
+  filename?: string
+): Promise<void> {
+  await descargarDocumento(`${base()}/zip/${jobId}/download`, filename);
 }

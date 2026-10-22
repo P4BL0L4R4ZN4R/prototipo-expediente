@@ -16,7 +16,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    'default' => env('DB_CONNECTION', 'pgsql'),
 
     /*
     |--------------------------------------------------------------------------
@@ -110,6 +110,66 @@ return [
             'prefix_indexes' => true,
             // 'encrypt' => env('DB_ENCRYPT', 'yes'),
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
+        ],
+
+
+        'norte' => [
+            'driver'         => 'pgsql',
+            'host'           => env('DB_HOST', '127.0.0.1'),
+            'port'           => env('DB_PORT', '5432'),
+            'database'       => env('DB_PLAZA_NORTE_DATABASE', 'db_plaza_norte'),
+            'username'       => env('DB_PLAZA_NORTE_USERNAME','postgres'),
+            'password'       => env('DB_PLAZA_NORTE_PASSWORD','admin'),
+            'charset'        => 'utf8',
+            'prefix'         => '',
+            'prefix_indexes' => true,
+            'search_path'    => 'public',
+            'sslmode'        => 'prefer',
+        ],
+
+
+        'merida' => [
+            'driver'         => 'pgsql',
+            'host'           => env('DB_HOST', '127.0.0.1'),
+            'port'           => env('DB_PORT', '5432'),
+            'database'       => env('DB_PLAZA_MERIDA', 'merida_test'),
+            'username'       => env('DB_PLAZA_MERIDA_USERNAME','postgres'),
+            'password'       => env('DB_PLAZA_MERIDA_PASSWORD','admin'),
+            'charset'        => 'utf8',
+            'prefix'         => '',
+            'prefix_indexes' => true,
+            'search_path'    => 'public',
+            'sslmode'        => 'prefer',
+        ],
+
+
+        'cdmx' => [
+            'driver'         => 'pgsql',
+            'host'           => env('DB_HOST', '127.0.0.1'),
+            'port'           => env('DB_PORT', '5432'),
+            'database'       => env('DB_PLAZA_CDMX', 'cdmx_test'),
+            'username'       => env('DB_PLAZA_CDMX_USERNAME','postgres'),
+            'password'       => env('DB_PLAZA_CDMX_PASSWORD','admin'),
+            'charset'        => 'utf8',
+            'prefix'         => '',
+            'prefix_indexes' => true,
+            'search_path'    => 'public',
+            'sslmode'        => 'prefer',
+        ],
+
+
+        'test00' => [
+            'driver'         => 'pgsql',
+            'host'           => env('DB_HOST', '127.0.0.1'),
+            'port'           => env('DB_PORT', '5432'),
+            'database'       => env('DB_PLAZA_TEST00_DATABASE', 'test00'),
+            'username'       => env('DB_USERNAME', 'postgres'), 
+            'password'       => env('DB_PASSWORD', 'admin'),       
+            'charset'        => 'utf8',
+            'prefix'         => '',
+            'prefix_indexes' => true,
+            'search_path'    => 'public',
+            'sslmode'        => 'prefer',
         ],
 
     ],

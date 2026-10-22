@@ -2,43 +2,66 @@
 
 namespace App\Http\Controllers\Word;
 
-use PhpOffice\PhpWord\TemplateProcessor;
 use App\Http\Controllers\Api\WordController;
-use App\Services\ExpedienteTextoStorage;
 use App\Services\Word\ExpedienteContext;
+use App\Services\Word\WordFieldDispatcher;
+use App\Services\Word\WordFieldRegistry;
+use App\Services\Word\WordFieldResolver;
 use App\Services\Word\WordTemplateService;
+use PhpOffice\PhpWord\TemplateProcessor;
 
 class ResumenWordController extends WordController
 {
     public function __construct(
         private WordTemplateService $tpl,
-        private ExpedienteTextoStorage $textoStorage,
-    ) {}
+        
+        WordFieldResolver $resolver,
+        WordFieldDispatcher $dispatcher,
+        
+    ) {
+        parent::__construct($resolver, $dispatcher);
+    }
 
-    protected function plantilla(): string { return 'plantillas/6.RESUMEN-EJECUTIVO.docx'; }
-    protected function nombreArchivo(string $id): string { return "resumen_ejecutivo_{$id}"; }
+    protected function plantilla(): string
+    {
+        return 'plantillas/6.RESUMEN-EJECUTIVO.docx';
+    }
+
+    protected function nombreArchivo(string $id): string
+    {
+        return "resumen_ejecutivo_{$id}";
+    }
+
+    protected function campos(): array
+    {
+        return WordFieldRegistry::resumen();
+    }
 
     protected function construir(TemplateProcessor $template, array $data, array $ia): void
     {
         $ctx = new ExpedienteContext($this->expedienteId, $data, $ia);
 
-        $propuesta = $this->textoStorage->obtenerPropuestaCompleta($ctx->id);
+        // 1. Campos declarativos: OBJETIVO, RANGO_FECHA, DIRECCION_CLIENTE
+        $this->inyectarCampos($template, $ctx);
 
+        // 2. Encabezado (custom por TITULO_1)
         $this->tpl->setEncabezadoEmpresa($template, $ctx, 'Resumen Ejecutivo');
 
-        $template->setValue('OBJETIVO', $propuesta['objetivo_general']['texto'] ?? '');
-        $template->setValue('CIUDAD',   $ctx->ciudad());
-        $template->setValue('RANGO_FECHA', $ctx->calc->periodoServicio());
+        // 3. CIUDAD (custom: viene de $ctx->ciudad() pero no está en el registry
+        //    porque no es parte del bloque común)
+        $template->setValue('CIUDAD', $ctx->ciudad());
 
-        // Lista de conceptos
+        // 4. Lista de conceptos (custom: usa cloneBlock, no se puede
+        //    expresar como método del registry)
         $conceptos = $ctx->conceptosIA();
+
         if (empty($conceptos)) {
             $template->deleteBlock('LISTA_PROCESOS');
         } else {
-            $replacements = [];
-            foreach ($conceptos as $c) {
-                $replacements[] = ['item_proceso' => $c['concepto'] ?? ''];
-            }
+            $replacements = array_map(
+                fn($c) => ['item_proceso' => $c['concepto'] ?? ''],
+                $conceptos
+            );
             $template->cloneBlock('LISTA_PROCESOS', 0, true, false, $replacements);
         }
     }
